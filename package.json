@@ -1,18 +1,24 @@
 {
-  "private": true,
-  "workspaces": [
-    "controller",
-    "solid-app-lib",
-    "solid-common-lib",
-    "loama",
-    "doctorapp",
-    "mockbook"
-  ],
-  "scripts": {
-    "build": "nx run-many -t build",
-    "dev": "nx run-many --parallel=5 --exclude=doctorapp,mockbook -t dev"
-  },
-  "devDependencies": {
-    "nx": "19.6.0"
-  }
+    "private": true,
+    "workspaces": [
+        "controller",
+        "solid-app-lib",
+        "solid-common-lib",
+        "loama",
+        "doctorapp",
+        "mockbook"
+    ],
+    "scripts": {
+        "build": "nx run-many -t build",
+        "dev": "nx run-many --parallel=5 --exclude=doctorapp,mockbook -t dev",
+        "pods:start": "community-solid-server -c @css:config/file.json --seedConfig css/config/seeds.json -f pods -p 8080",
+        "pods:reset": "rimraf pods"
+    },
+    "devDependencies": {
+        "nx": "19.6.0"
+    },
+    "dependencies": {
+        "@solid/community-server": "^7.1.2",
+        "rimraf": "^6.0.1"
+    }
 }

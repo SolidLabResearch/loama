@@ -2,6 +2,7 @@ node_modules/
 dist/
 build/
 .env
+pods/
 
 .nx/cache
 .nx/workspace-data
