@@ -22,6 +22,17 @@ yarn build
 
 ```
 
+## How to test this project
+
+- Make sure your are in the `loama` subdirectory
+- Run `yarn build && yarn preview` this will spinup a production like server on `http://localhost:4173`
+- Open a new terminal and go to the root of this repo
+- Spin-up a CSS pod with some predefined data: `yarn pods:start`. It is recommended to run `yarn pods:reset && yarn pods:start` when you've ran the tests before. This will clear the pods data folder so you are sure the test run with a clean sheet
+- Now you are ready to run the test suite `yarn test`
+
+> [!NOTE]
+> These test are created with the assumption that the solid server adds some basic files to the pods like the README and profile/card
+
 ### How to manually test this project
 - Login with a valid IDP
 - Select a file (I've mostly used the README file)
