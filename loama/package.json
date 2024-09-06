@@ -11,7 +11,9 @@
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
         "format": "prettier --write src/",
         "lint:ci": "eslint . --config .eslintrc.cjs --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --format node_modules/eslint-formatter-markdown/markdown.js",
-        "test": "playwright test"
+        "test": "playwright test",
+        "pods:start": "community-solid-server -c @css:config/file.json --seedConfig ../css/config/seeds.json -f pods -p 8080",
+        "pods:reset": "rimraf pods"
     },
     "engines": {
         "node": ">=20"
