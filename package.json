@@ -10,9 +10,7 @@
     ],
     "scripts": {
         "build": "nx run-many -t build",
-        "dev": "nx run-many --parallel=5 --exclude=doctorapp,mockbook -t dev",
-        "pods:start": "community-solid-server -c @css:config/file.json --seedConfig css/config/seeds.json -f pods -p 8080",
-        "pods:reset": "rimraf pods"
+        "dev": "nx run-many --parallel=5 --exclude=doctorapp,mockbook -t dev"
     },
     "devDependencies": {
         "nx": "19.6.0"
