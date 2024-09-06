@@ -205,22 +205,21 @@ test.describe("Permission table", () => {
         await accessSwitch.uncheck();
         await expect(accessSwitch).not.toBeChecked();
 
+        await new Promise(res => setTimeout(res, 3000));
+
         const podPage = await browser.newPage();
         // Disable caching
         await podPage.route("**/pod1/README", (route) => route.continue());
         await podPage.goto("http://localhost:8080/pod1/README");
-        await expect(podPage.getByText("Welcome to your pod")).toBeVisible();
+        await expect(podPage.getByText("Not logged in")).toBeVisible();
 
         // Remove access
         await accessSwitch.check();
         await expect(accessSwitch).toBeEnabled();
+        await new Promise(res => setTimeout(res, 3000));
 
         await podPage.reload();
-        await expect(podPage.getByText("Not logged in")).toBeVisible();
-
-        // Restore to default state
-        await accessSwitch.check();
-        await expect(accessSwitch).toBeEnabled();
+        await expect(podPage.getByText("Welcome to your pod")).toBeVisible();
     });
 
     test("Removing access keeps permissions on re-enabling of access", async ({ page }) => {
