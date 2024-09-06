@@ -96,4 +96,93 @@ test.describe("Permission table", () => {
         await readPermCheckbox.check();
         await expect(readPermCheckbox).toBeEnabled();
     });
+
+    test("Granting control permission give's a popup", async ({ page }) => {
+        await page.getByText("README").click();
+
+        // Check if right panel is loaded
+        const rightPanelElem = page.locator(".right-panel");
+        const listHeader = rightPanelElem.locator(".list-header");
+        await expect(listHeader).toContainText("Subjects with permissions")
+
+        await rightPanelElem.getByRole("button", { name: "Edit" }).click();
+
+        const tableDrawer = page.locator(".permission-drawer");
+        const publicSubjectRow = tableDrawer.locator("tr", { hasText: "Public" });
+        await expect(publicSubjectRow).toBeVisible();
+        await publicSubjectRow.getByRole("button", { name: "Edit" }).click();
+
+        const subjectEditorDrawer = page.locator(".subject-drawer");
+        await expect(subjectEditorDrawer).toBeVisible()
+        const controlPermCheckbox = subjectEditorDrawer.getByLabel('Control')
+        await expect(controlPermCheckbox).not.toBeChecked();
+        await controlPermCheckbox.check();
+
+        const checkDialog = page.getByText("Grant control permission?");
+        await expect(checkDialog).toBeVisible();
+    });
+
+    test("Grant btn in popup contol permission gives the permission", async ({ page }) => {
+        await page.getByText("README").click();
+
+        // Check if right panel is loaded
+        const rightPanelElem = page.locator(".right-panel");
+        const listHeader = rightPanelElem.locator(".list-header");
+        await expect(listHeader).toContainText("Subjects with permissions")
+
+        await rightPanelElem.getByRole("button", { name: "Edit" }).click();
+
+        const tableDrawer = page.locator(".permission-drawer");
+        const publicSubjectRow = tableDrawer.locator("tr", { hasText: "Public" });
+        await expect(publicSubjectRow).toBeVisible();
+        await publicSubjectRow.getByRole("button", { name: "Edit" }).click();
+
+        const subjectEditorDrawer = page.locator(".subject-drawer");
+        await expect(subjectEditorDrawer).toBeVisible()
+        const controlPermCheckbox = subjectEditorDrawer.getByLabel('Control')
+        await expect(controlPermCheckbox).not.toBeChecked();
+        await controlPermCheckbox.check();
+
+        const checkDialog = page.getByRole("alertdialog", { name: "Grant control permission?" });
+        await expect(checkDialog).toBeVisible();
+
+        await checkDialog.getByRole("button", { name: "Grant" }).click();
+
+        await expect(controlPermCheckbox).toBeEnabled();
+        await expect(controlPermCheckbox).toBeChecked();
+        await controlPermCheckbox.uncheck();
+        await expect(controlPermCheckbox).toBeEnabled();
+    });
+
+    test("An toast should show while updating permissions", async ({ page }) => {
+        await page.getByText("README").click();
+
+        // Check if right panel is loaded
+        const rightPanelElem = page.locator(".right-panel");
+        const listHeader = rightPanelElem.locator(".list-header");
+        await expect(listHeader).toContainText("Subjects with permissions")
+
+        await rightPanelElem.getByRole("button", { name: "Edit" }).click();
+
+        const tableDrawer = page.locator(".permission-drawer");
+        const publicSubjectRow = tableDrawer.locator("tr", { hasText: "Public" });
+        await expect(publicSubjectRow).toBeVisible();
+        await publicSubjectRow.getByRole("button", { name: "Edit" }).click();
+
+        const subjectEditorDrawer = page.locator(".subject-drawer");
+        await expect(subjectEditorDrawer).toBeVisible()
+        const writePermCheckbox = subjectEditorDrawer.getByLabel('Write')
+        await expect(writePermCheckbox).not.toBeChecked();
+        await writePermCheckbox.check();
+
+        const mask = page.locator(".p-drawer-mask", { hasText: "Edit subject" })
+        await mask.click({ position: { x: 1, y: 1 } });
+
+        const alertToast = page.getByRole("alert")
+        await expect(alertToast).toBeVisible();
+
+        await expect(writePermCheckbox).toBeEnabled();
+        await writePermCheckbox.uncheck();
+        await expect(writePermCheckbox).toBeEnabled();
+    })
 })
