@@ -24,11 +24,13 @@ yarn build
 
 ## How to test this project
 
+- First do a full build of the repo
+    - Open a terminal in the root of this repo
+    - Run `yarn` to install all dependencies
+    - Run `yarn build` to build all dependencies
 - Make sure your are in the `loama` subdirectory
-- Run `yarn build && yarn preview` this will spinup a production like server on `http://localhost:4173`
-- Open a new terminal and go to the root of this repo
-- Spin-up a CSS pod with some predefined data: `yarn pods:start`. It is recommended to run `yarn pods:reset && yarn pods:start` when you've ran the tests before. This will clear the pods data folder so you are sure the test run with a clean sheet
-- Now you are ready to run the test suite `yarn test`
+- Run `yarn playwright install --with-deps` to install the headless browsers + system dependencies
+- Now you are ready to run the test suite `yarn test`, this will spin-up a preview server on port 4173 & a CSS on port 8080. Make sure nothing else is running on these ports as playwright will otherwise think those services are the services it tries to start
 
 > [!NOTE]
 > These test are created with the assumption that the solid server adds some basic files to the pods like the README and profile/card
