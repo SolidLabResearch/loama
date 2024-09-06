@@ -43,21 +43,17 @@ test.describe("Permission table", () => {
 
         // The new subject only should have the read permission
         // We uncheck it to remove the subject so we are back to the previous state
-        await subjectEditorDrawer.getByLabel('Read').uncheck();
+        await expect(subjectEditorDrawer.getByLabel('Read')).toBeChecked();
         await expect(subjectEditorDrawer.getByLabel('Write')).not.toBeChecked();
         await expect(subjectEditorDrawer.getByLabel('Append')).not.toBeChecked();
         await expect(subjectEditorDrawer.getByLabel('Control')).not.toBeChecked();
 
-        // Wait until the operation is finished
-        await expect(subjectEditorDrawer.getByLabel('Read')).toBeEnabled();
-
         await subjectEditorDrawer.locator("button.p-drawer-close-button").click();
         await expect(subjectEditorDrawer).toBeHidden();
 
-        // Check if the table is updated & close the drawer
-        await expect(tableDrawer.locator("tbody").getByRole("row")).toHaveCount(2);
+        // Use delete button to remove entry
+        await newSubjectRow.getByRole("button", { name: "Delete" }).click();
         await tableDrawer.locator("button.p-drawer-close-button").click();
-        await expect(tableDrawer).toBeHidden();
 
         // Check if the right side panel has the 2 subjects
         await expect(startAgentPanelList.getByRole("listitem")).toHaveCount(2);
@@ -189,5 +185,105 @@ test.describe("Permission table", () => {
         await expect(writePermCheckbox).toBeEnabled();
         await writePermCheckbox.uncheck();
         await expect(writePermCheckbox).toBeEnabled();
+    });
+
+    test("Disabling permissions remove access", async ({ page, browser }) => {
+        await page.getByText("README").click();
+
+        // Check if right panel is loaded
+        const rightPanelElem = page.locator(".right-panel");
+        const listHeader = rightPanelElem.locator(".list-header");
+        await expect(listHeader).toContainText("Subjects with permissions")
+
+        await rightPanelElem.getByRole("button", { name: "Edit" }).click();
+
+        const tableDrawer = page.locator(".permission-drawer");
+        const publicSubjectRow = tableDrawer.locator("tr", { hasText: "Public" });
+        await expect(publicSubjectRow).toBeVisible();
+
+        const accessSwitch = publicSubjectRow.getByRole("switch");
+        await accessSwitch.uncheck();
+        await expect(accessSwitch).not.toBeChecked();
+
+        const podPage = await browser.newPage();
+        // Disable caching
+        await podPage.route("**/pod1/README", (route) => route.continue());
+        await podPage.goto("http://localhost:8080/pod1/README");
+        await expect(podPage.getByText("Welcome to your pod")).toBeVisible();
+
+        // Remove access
+        await accessSwitch.check();
+        await expect(accessSwitch).toBeEnabled();
+
+        await podPage.reload();
+        await expect(podPage.getByText("Not logged in")).toBeVisible();
+
+        // Restore to default state
+        await accessSwitch.check();
+        await expect(accessSwitch).toBeEnabled();
+    });
+
+    test("Removing access keeps permissions on re-enabling of access", async ({ page }) => {
+        await page.getByText("README").click();
+
+        // Check if right panel is loaded
+        const rightPanelElem = page.locator(".right-panel");
+        const listHeader = rightPanelElem.locator(".list-header");
+        await expect(listHeader).toContainText("Subjects with permissions")
+
+        await rightPanelElem.getByRole("button", { name: "Edit" }).click();
+
+        const tableDrawer = page.locator(".permission-drawer");
+        const publicSubjectRow = tableDrawer.locator("tr", { hasText: "Public" });
+        await expect(publicSubjectRow).toBeVisible();
+
+        // Open subject editor drawer & give write permissions
+        await publicSubjectRow.getByRole("button", { name: "Edit" }).click();
+        const subjectEditorDrawer = page.locator(".subject-drawer");
+        await expect(subjectEditorDrawer).toBeVisible()
+        const writePermCheckbox = subjectEditorDrawer.getByLabel('Write')
+        await expect(writePermCheckbox).not.toBeChecked();
+        await writePermCheckbox.check();
+        await expect(writePermCheckbox).toBeChecked();
+        await expect(writePermCheckbox).toBeEnabled();
+
+        // close subject editor drawer
+        const subjectEditorCloseBtn = subjectEditorDrawer.locator("button.p-drawer-close-button");
+        await subjectEditorCloseBtn.click();
+        await expect(subjectEditorDrawer).toBeHidden();
+
+        // Disable access
+        const accessSwitch = publicSubjectRow.getByRole("switch");
+        await accessSwitch.uncheck();
+        await expect(accessSwitch).not.toBeChecked();
+
+        // Force reload the permission table
+        await publicSubjectRow.getByRole("button", { name: "Edit" }).click();
+        await expect(subjectEditorDrawer).toBeVisible()
+        await subjectEditorCloseBtn.click();
+        await expect(subjectEditorDrawer).toBeHidden();
+
+        // Check if write permissions is checked in table
+        await expect(publicSubjectRow.locator('td:nth-child(4) > .locheck')).toBeVisible();
+
+        // Re-enable access
+        await accessSwitch.check();
+        await expect(accessSwitch).toBeChecked();
+
+        // Restoring to default state
+        await publicSubjectRow.getByRole("button", { name: "Edit" }).click();
+        await expect(subjectEditorDrawer).toBeVisible()
+        await writePermCheckbox.uncheck();
+        await expect(writePermCheckbox).not.toBeChecked();
+        await expect(writePermCheckbox).toBeEnabled();
+
+        await subjectEditorCloseBtn.click();
+        await expect(subjectEditorDrawer).toBeHidden();
+
+
+        // Check if write permissions are removed from the table
+        await expect(publicSubjectRow.locator('td:nth-child(4) > .locheck')).toBeHidden({
+            timeout: 10000,
+        });
     })
 })
