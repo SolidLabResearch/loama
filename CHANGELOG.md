@@ -27,4 +27,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Adds a switch will remove the access of a user. It preserves the given permissions in the index & will prevent remote from overwriting these when an item is disabled
 - Add button to remove access from resource for subject
 - Change components so everything uses typescript
+- Add automated UI tests
+- Add Github action to run UI tests on PR to default branch
 - Add pinia store for external state management in loama
