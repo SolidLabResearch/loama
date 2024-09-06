@@ -83,6 +83,8 @@ test.describe("Permission table", () => {
         await expect(readPermCheckbox).toBeChecked();
 
         const podPage = await browser.newPage();
+        // Disable caching
+        await podPage.route("**/pod1/README", (route) => route.continue());
         await podPage.goto("http://localhost:8080/pod1/README");
         await expect(podPage.getByText("Welcome to your pod")).toBeVisible();
 
