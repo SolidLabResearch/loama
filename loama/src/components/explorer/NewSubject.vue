@@ -3,7 +3,7 @@
         <Drawer v-model:visible="visible" header="New Subject" position="right" class="new-subject-drawer">
             <p>This will add the subject to the permission table & give it read rights.</p>
             <Select v-model="selectedType" :options="typeOptions" placeholder="Select a subject type"
-                class="w-full md:w-56" />
+                class="w-full md:w-56" name="subject-type" />
             <div v-if="selectedType !== null" class="new-subject-content">
                 <component ref="form" :is="subjectForms[selectedType]" />
                 <div>

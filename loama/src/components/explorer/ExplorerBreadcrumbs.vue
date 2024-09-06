@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div id="explorer-breadcrumbs">
         <template v-for="(param, index) in params" :key="index">
             <RouterLink v-if="param !== '/' && index !== params.length - 2" :to="'../'.repeat(index)">
                 {{ param }}
