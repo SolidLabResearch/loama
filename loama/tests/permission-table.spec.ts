@@ -4,6 +4,9 @@ import authSetup from "./auth.setup";
 test.beforeEach(authSetup);
 
 test.describe("Permission table", () => {
+    test.beforeEach(async ({ context }) => {
+        context.setDefaultTimeout(30000);
+    });
     test("Can add & remove webId subject", async ({ page }) => {
         await page.getByText("README").click();
 

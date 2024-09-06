@@ -4,12 +4,20 @@ import authSetup from './auth.setup';
 test.beforeEach(authSetup);
 
 test.describe("Resource Explorer", () => {
-    test("Can enter container", async ({ page }) => {
-        await page.getByRole("button", { name: "View resources" }).click();
-        const breadcrumsElement = page.locator("#explorer-breadcrumbs");
-        expect(breadcrumsElement).toContainText("/home/profile/");
+    test.beforeEach(async ({ context }) => {
+        context.setDefaultTimeout(30000);
+    });
 
-        expect(page.getByText("card")).toBeVisible();
+    test("Can enter container", async ({ page }) => {
+        await page.getByText('profileView resources').getByRole("button", { name: "View resources" }).click();
+        await expect(page.locator(".left-panel").getByText("card")).toBeVisible({
+            timeout: 30000,
+        });
+
+        const breadcrumsElement = page.locator("#explorer-breadcrumbs");
+        await expect(breadcrumsElement).toContainText("/home/profile/", {
+            timeout: 30000,
+        });
     })
     test("Can go up a level", async ({ page }) => {
         await page.getByRole("button", { name: "View resources" }).click();
