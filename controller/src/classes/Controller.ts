@@ -195,6 +195,7 @@ export class Controller<T extends Record<keyof T, BaseSubject<keyof T & string>>
         const configs: SubjectConfig<T>[] = Object.values(this.subjectConfigs);
 
         const index = await this.store.getCurrentIndex();
+        const requestAccessResources = await this.store.getCurrentResources();
         const resourcesToSkip = index.items.filter(i => i.resource.includes(containerUrl));
 
         const results = await Promise.allSettled(configs.map(c => c.manager.getContainerPermissionList(containerUrl, resourcesToSkip.map(i => i.resource))))
@@ -238,6 +239,7 @@ export class Controller<T extends Record<keyof T, BaseSubject<keyof T & string>>
             } else {
                 arr.push({
                     resourceUrl: v.resource,
+                    canRequestAccess: requestAccessResources.items.includes(v.resource),
                     permissionsPerSubject: [{
                         permissions: v.permissions,
                         subject: v.subject,
@@ -254,12 +256,14 @@ export class Controller<T extends Record<keyof T, BaseSubject<keyof T & string>>
         // Need to put it in a variable because the type declaration vanishes
         const configs: SubjectConfig<T>[] = Object.values(this.subjectConfigs);
         const index = await this.store.getCurrentIndex<keyof T & string>();
+        const requestAccessResources = await this.store.getCurrentResources();
         const results = await Promise.allSettled(configs.map(c => c.manager.getRemotePermissions<keyof T & string>(resourceUrl)))
 
         let permissionsPerSubject = index.items.filter(i => i.resource === resourceUrl)
 
         return {
             resourceUrl,
+            canRequestAccess: requestAccessResources.items.includes(resourceUrl),
             permissionsPerSubject: results.reduce<SubjectPermissions<T[keyof T & string]>[]>((arr, v) => {
                 if (v.status === "fulfilled") {
                     v.value.forEach(remotePps => {
@@ -280,6 +284,11 @@ export class Controller<T extends Record<keyof T, BaseSubject<keyof T & string>>
         }
     }
 
+    async canRequestAccessToResource(resourceUrl: string) {
+        const resources = await this.store.getCurrentResources();
+        return resources.items.includes(resourceUrl);
+    }
+
     async allowAccessRequest(resourceUrl: string) {
         const resources = await this.store.getCurrentResources();
         if (resources.items.includes(resourceUrl)) {
@@ -290,7 +299,7 @@ export class Controller<T extends Record<keyof T, BaseSubject<keyof T & string>>
         await this.store.saveToRemoteResources();
     }
 
-    async denyAccessRequest(resourceUrl: string) {
+    async disallowAccessRequest(resourceUrl: string) {
         const resources = await this.store.getCurrentResources();
         if (!resources.items.includes(resourceUrl)) {
             return;
