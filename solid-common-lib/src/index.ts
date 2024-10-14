@@ -11,12 +11,16 @@ export { url } from "./types";
  * @returns The URL's to the pods the user has access to
  */
 export async function listPodUrls(session: Session): Promise<url[]> {
-    const urls = await getPodUrlAll(session.info.webId!, {
-        fetch: session.fetch,
+    return listWebIdPodUrls(session.info.webId!, session.fetch);
+}
+
+export async function listWebIdPodUrls(webId: string, fetch?: typeof globalThis.fetch): Promise<url[]> {
+    const urls = await getPodUrlAll(webId, {
+        fetch,
     });
     if (urls.length === 0) {
         // TODO this is a guess and should be much more resilient
-        urls.push((new URL('../', session.info.webId!)).toString())
+        urls.push((new URL('../', webId)).toString())
     }
     return urls;
 }
