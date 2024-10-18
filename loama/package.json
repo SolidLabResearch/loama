@@ -10,7 +10,10 @@
         "type-check": "vue-tsc --build --force",
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
         "format": "prettier --write src/",
-        "lint:ci": "eslint . --config .eslintrc.cjs --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --format node_modules/eslint-formatter-markdown/markdown.js"
+        "lint:ci": "eslint . --config .eslintrc.cjs --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --format node_modules/eslint-formatter-markdown/markdown.js",
+        "test": "playwright test",
+        "pods:start": "community-solid-server -c @css:config/file.json --seedConfig ../css/config/seeds.json -f pods -p 8080",
+        "pods:reset": "rimraf pods"
     },
     "engines": {
         "node": ">=20"
@@ -18,18 +21,19 @@
     "dependencies": {
         "@inrupt/solid-client-authn-browser": "^2.2.4",
         "@phosphor-icons/vue": "^2.2.1",
-        "@primevue/themes": "^4.0.5",
+        "@primevue/themes": "^4.1.1",
         "@vueform/multiselect": "^2.6.9",
         "loama-app": "^1.0.0",
         "loama-common": "^1.0.0",
         "loama-controller": "^1.0.0",
         "pinia": "^2.2.2",
-        "primevue": "^4.0.5",
+        "primevue": "^4.1.1",
         "vite-svg-loader": "^5.1.0",
         "vue": "^3.4.29",
         "vue-router": "^4.3.3"
     },
     "devDependencies": {
+        "@playwright/test": "^1.47.0",
         "@rushstack/eslint-patch": "^1.8.0",
         "@tsconfig/node20": "^20.1.4",
         "@types/node": "^20.14.5",

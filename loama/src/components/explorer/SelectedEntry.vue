@@ -11,7 +11,7 @@
                 <h3>Subjects with permissions:</h3>
                 <LoButton :left-icon="PhPencil" @click="() => permissionDrawerVisible = true">Edit</LoButton>
             </div>
-            <ul>
+            <ul data-testid="sidepanel-permission-list">
                 <li :key="activeController.getLabelForSubject(permission.subject)"
                     v-for="permission in podStore.selectedEntry.permissionsPerSubject">
                     {{ activeController.getLabelForSubject(permission.subject) }}
@@ -82,10 +82,8 @@ a {
     align-items: center;
 }
 </style>
-<style src="@vueform/multiselect/themes/default.css"></style>
 <style>
 .permission-drawer {
     width: 90vw !important;
 }
 </style>
-<style src="@vueform/multiselect/themes/default.css"></style>

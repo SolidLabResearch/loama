@@ -1,18 +1,22 @@
 {
-  "private": true,
-  "workspaces": [
-    "controller",
-    "solid-app-lib",
-    "solid-common-lib",
-    "loama",
-    "doctorapp",
-    "mockbook"
-  ],
-  "scripts": {
-    "build": "nx run-many -t build",
-    "dev": "nx run-many --parallel=5 --exclude=doctorapp,mockbook -t dev"
-  },
-  "devDependencies": {
-    "nx": "19.6.0"
-  }
+    "private": true,
+    "workspaces": [
+        "controller",
+        "solid-app-lib",
+        "solid-common-lib",
+        "loama",
+        "doctorapp",
+        "mockbook"
+    ],
+    "scripts": {
+        "build": "nx run-many -t build",
+        "dev": "nx run-many --parallel=5 --exclude=doctorapp,mockbook -t dev"
+    },
+    "devDependencies": {
+        "nx": "19.6.0"
+    },
+    "dependencies": {
+        "@solid/community-server": "^7.1.2",
+        "rimraf": "^6.0.1"
+    }
 }
