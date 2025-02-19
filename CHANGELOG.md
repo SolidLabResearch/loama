@@ -29,4 +29,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Change components so everything uses typescript
 - Add pinia store for external state management in loama
 - Add default image for logged in user
-- Apps can run in a non-empty base path [issue #41](https://github.com/SolidLabResearch/loama/issues/41)
+- Apps can run in a non-empty base path ([issue #41](https://github.com/SolidLabResearch/loama/issues/41))
