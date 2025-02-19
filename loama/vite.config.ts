@@ -16,5 +16,8 @@ export default defineConfig({
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))
         }
-    }
+    },
+    // make it work behind a reverse proxy, serving us at a url with non empty path
+    base: './'
+
 })
