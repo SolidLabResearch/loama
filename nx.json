@@ -13,19 +13,6 @@
                 "^build"
             ],
             "cache": true
-        },
-        "dev": {
-            "inputs": [
-                "production",
-                "^production"
-            ],
-            "outputs": [
-                "{projectRoot}/dist"
-            ],
-            "dependsOn": [
-                "^dev"
-            ],
-            "cache": false
         }
     },
     "namedInputs": {
