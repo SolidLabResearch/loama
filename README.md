@@ -44,18 +44,31 @@ relies on solid-common-lib.
 
 ## Getting started
 
-### prerequisites
+### Prerequisites
 
 - Node >= 20
 - Yarn >= 1.22.x
+
+### Environment variables
+
+The apps are configurable by means of some environment variables.
+
+The environment variables are read from `.env[.mode]` files as [documented by Vite](https://v2.vitejs.dev/config/#environment-variables).
+
+Each app has a file `.env.example` showing the possibilities.
+You may copy it to e.g. `env` in the same directory and modify it to your needs.
+
+One environment variable is common to all apps: `VITE_BASE`, allowing to run the app in a URL with a path.
+The loama `.env.example` file would result in the loama app running at e.g. `http://localhost:5173/loama/`.
+Very useful for running this app behind a reverse proxy!
 
 ### Development setup
 
 We use yarn workspaces to manage our dependencies of all the subprojects.
 
-Run `yarn` or `yarn install` to get all the dependencies
+Run `yarn` or `yarn install` to get all the dependencies.
 
-Finally we use [nx](nx.dev) to run a job in multiple projects. Simply start the dev servers for loama & its dependencies with:
+Finally we use [nx](https://nx.dev) to run a job in multiple projects. Simply start the dev servers for loama and its dependencies with:
 
 `yarn dev`
 

@@ -81,7 +81,7 @@ export async function getProfileInfo(
     const mbox = getUrl(profileThing, Schema.mbox) ?? "";
     const description =
         getStringWithLocale(profileThing, Schema.description, "en-us") ?? "";
-    const img = getUrl(profileThing, Schema.img) ?? "/profile.svg";
+    const img = getUrl(profileThing, Schema.img) ?? (import.meta.env.BASE_URL + "profile.svg");
     const phone = getUrl(profileThing, Schema.phone) ?? "";
 
     return { name, mbox, description, img, phone };
