@@ -56,7 +56,7 @@ The apps are configurable by means of some environment variables.
 The environment variables are read from `.env[.mode]` files as [documented by Vite](https://v2.vitejs.dev/config/#environment-variables).
 
 Each app has a file `.env.example` showing the possibilities.
-You may copy it to e.g. `env` in the same directory and modify it to your needs.
+You may copy it to e.g. `.env` in the same directory and modify it to your needs.
 
 One environment variable is common to all apps: `VITE_BASE`, allowing to run the app in a URL with a path.
 The loama `.env.example` file would result in the loama app running at e.g. `http://localhost:5173/loama/`.
@@ -68,11 +68,27 @@ We use yarn workspaces to manage our dependencies of all the subprojects.
 
 Run `yarn` or `yarn install` to get all the dependencies.
 
-Finally we use [nx](https://nx.dev) to run a job in multiple projects. Simply start the dev servers for loama and its dependencies with:
+Do this before starting loama a very first time after installation:
 
-`yarn dev`
+```bash
+# terminate all yarn dev commands below with <Ctrl-C> as soon as they display "Found 0 errors. Watching for file changes."
+cd ./solid-common-lib/
+yarn dev
+cd ../solid-app-lib/
+yarn dev
+cd ../controller/
+yarn dev
+```
 
-Now you can find loama at http://localhost:5173
+To start the dev server for loama and its dependencies:
+
+```bash
+yarn dev
+```
+
+This makes use of [nx](https://nx.dev) to run a job in multiple projects.
+
+Now you can find loama at <http://localhost:5173>, or in a URL with a path, if you configured so in your `.env` as explained above.
 
 ### Using your own SOLID pod
 
