@@ -23,7 +23,7 @@ export class ODRLAccessRequestService {
             `${this.authorizationServerURL}/requests`, {
                 method: 'POST',
                 headers: {
-                    'authorization': requestingParty,
+                    'authorization': `WebID ${encodeURIComponent(requestingParty)}`,
                     'content-type': 'text/turtle'
                 }, body: await this.accessRequestToTtl({
                     uid: uuid(),
@@ -68,7 +68,7 @@ export class ODRLAccessRequestService {
             `${this.authorizationServerURL}/requests/${encodeURIComponent(accessRequestID)}`, {
                 method: 'PATCH',
                 headers: {
-                    'authorization': resourceOwner,
+                    'authorization': `WebID ${encodeURIComponent(resourceOwner)}`,
                     'content-type': 'application/json'
                 }, body: JSON.stringify({ status: status })
             }
@@ -87,7 +87,7 @@ export class ODRLAccessRequestService {
                 `${this.authorizationServerURL}${endpoint}`, {
                     method: 'GET',
                     headers: {
-                        'authorization': resourceOwnerOrRequestingPartyID
+                        'authorization': `WebID ${encodeURIComponent(resourceOwnerOrRequestingPartyID)}`
                     }
                 }
             ))

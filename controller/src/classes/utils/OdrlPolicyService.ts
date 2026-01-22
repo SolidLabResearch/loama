@@ -29,7 +29,7 @@ export class ODRLPolicyService {
         // Get all our policies
         const response = await fetch(UMA_URL(this.authorizationServerURL), {
             headers: {
-                "Authorization": webId,
+                "Authorization": `WebID ${encodeURIComponent(webId)}`,
                 "Accept": "text/turtle"
             }
         });
@@ -46,7 +46,7 @@ export class ODRLPolicyService {
         // Get all our policies
         const response = await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
             headers: {
-                "Authorization": webId,
+                "Authorization": `WebID ${encodeURIComponent(webId)}`,
                 "Accept": "text/turtle"
             }
         });
@@ -62,7 +62,7 @@ export class ODRLPolicyService {
         await fetch(UMA_URL(this.authorizationServerURL), {
             method: 'POST',
             headers: {
-                'Authorization': webId,
+                'Authorization': `WebID ${encodeURIComponent(webId)}`,
                 'Content-type': 'text/turtle'
                 // 'Content-type': 'application/sparql-update'
             },
@@ -74,7 +74,7 @@ export class ODRLPolicyService {
         await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
             method: 'PATCH',
             headers: {
-                'Authorization': webId,
+                'Authorization': `WebID ${encodeURIComponent(webId)}`,
                 'Content-type': 'application/sparql-update'
             },
             body: body
@@ -158,7 +158,7 @@ WHERE {}`)
         // 1: Fetch the policy contents
         const response = await fetch(UMA_URL(this.authorizationServerURL), {
             headers: {
-                Authorization: webId,
+                Authorization: `WebID ${encodeURIComponent(webId)}`,
                 Accept: "text/turtle"
             }
         });
@@ -219,7 +219,7 @@ WHERE {}`)
                     UMA_URL(this.authorizationServerURL, `/${encodeURIComponent(policyId)}`), {
                         method: "PATCH",
                         headers: {
-                            "Authorization": webId,
+                            "Authorization": `WebID ${encodeURIComponent(webId)}`,
                             "Content-type": "application/sparql-update",
                         },
                         body: `
