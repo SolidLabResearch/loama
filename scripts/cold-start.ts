@@ -87,7 +87,7 @@ const main = async () => {
     const response = await fetch(`${process.env.AUTHORIZATION_SERVER || 'http://localhost:4000/'}uma/policies`, {
         method: 'POST',
         headers: {
-            'Authorization': `WebID ${webid}`,
+            'Authorization': `WebID ${encodeURIComponent(webid)}`,
             'Content-Type': 'text/turtle'
         },
         body: body
