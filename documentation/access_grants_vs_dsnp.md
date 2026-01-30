@@ -77,7 +77,7 @@ A simple curl request would look like this:
 
 ```shell-session
 curl --location 'http://localhost:4000/uma/requests' \
---header 'Authorization: https://example.pod.knows.idlab.ugent.be/profile/card#me' \
+--header 'Authorization: WebID https://example.pod.knows.idlab.ugent.be/profile/card#me' \
 --header 'Content-Type: text/turtle' \
 --data-raw '
 @prefix sotw: <https://w3id.org/force/sotw#> .
@@ -106,7 +106,7 @@ This should through a simple `GET` requests on `/uma/requests`, like the one bel
 It is important to provide the correct authorization, as the AS should link this to all requests with targets linked to the RO's resources.
 
 ```shell-session
-curl --header 'Authorization: https://pod.harrypodder.org/profil/card#me' 'http://localhost:4000/uma/requests'
+curl --header 'Authorization: WebID https://pod.harrypodder.org/profil/card#me' 'http://localhost:4000/uma/requests'
 ```
 
 When the RO wants to update the status of a request with id `RequestIdentifier`, they should provide a **PATCH** request to `/uma/request/<encodedRequestIdentifier>`.
@@ -115,7 +115,7 @@ In our use case, this message should look like this:
 
 ```shell-session
 curl -X PATCH --location 'http://localhost:4000/uma/requests/<encodedRequestIdentifier>' \
---header 'Authorization: https://pod.harrypodder.org/profile/card#me' \
+--header 'Authorization: WebID https://pod.harrypodder.org/profile/card#me' \
 --header 'Content-type: application/sparql-update' \
 --data-raw '
 PREFIX ex: <https://access.request.org/>
@@ -200,7 +200,7 @@ A valid message would thus be:
 
 ```shell-session
 curl --location 'http://localhost:4000/uma/negotiations/request' \
---header 'Authorization: https://example.pod.knows.idlab.ugent.be/profile/card#me' \
+--header 'Authorization: WebID https://example.pod.knows.idlab.ugent.be/profile/card#me' \
 --header 'Content-Type: application/ld+json' \
 --data-raw ' {
     "@context": [
@@ -272,7 +272,7 @@ A valid message looks like this:
 
 ```shell-session
 curl --location 'http://localhost:3000/callback/negotiations/<encodedRequestingPartyUUID>/agreement' \
---header 'Authorization: https://pod.harrypodder.org/profile/card#me' \
+--header 'Authorization: WebID https://pod.harrypodder.org/profile/card#me' \
 --header 'Content-Type: application/ld+json' \
 --data-raw '{
     "@context": [
@@ -331,7 +331,7 @@ It should be sent to the following endpoint on the AS:
 
 ```shell-session
 curl --location 'http://localhost:4000/uma/negotiations/<encodedAuthorizationServerUUID>/agreement/verification' \
---header 'Authorization: https://example.pod.knows.idlab.ugent.be/profile/card#me' \
+--header 'Authorization: WebID https://example.pod.knows.idlab.ugent.be/profile/card#me' \
 --header 'Content-Type: application/ld+json' \
 --data-raw ' {
     "@context": [
@@ -379,7 +379,7 @@ This must once again be sent to a different endpoint on the callback address:
 
 ```shell-session
 curl --location 'http://localhost:3000/callback/negotiations/<encodedRequestingPartyUUID>/events' \
---header 'Authorization: https://pod.harrypodder.org/profile/card#me' \
+--header 'Authorization: WebID https://pod.harrypodder.org/profile/card#me' \
 --header 'Content-Type: application/ld+json' \
 --data-raw '{
     "@context": [
