@@ -99,8 +99,8 @@ export class ODRLPolicyService {
         }
     }
 
-    public async patchPolicy(webId: string, policyId: string, body: string) {
-        const response = await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
+    public async patchPolicy(webId: string, _policyId: string, body: string) {
+        const response = await fetch(UMA_URL(this.authorizationServerURL), {
             method: 'PATCH',
             headers: {
                 'Authorization': await getBearerAuthorizationHeader(),
@@ -287,7 +287,7 @@ WHERE {}`)
         for (const policyId of policyIds.keys()) {
             for (const ruleId of policyIds.get(policyId)!) {
                 const deleteResponse = await fetch(
-                    UMA_URL(this.authorizationServerURL, `/${encodeURIComponent(policyId)}`), {
+                    UMA_URL(this.authorizationServerURL), {
                         method: "PATCH",
                         headers: {
                             "Authorization": await getBearerAuthorizationHeader(),
