@@ -25,6 +25,30 @@ export class ODRLPolicyService {
         return result;
     }
 
+    private getOdrlActions(permission: Permission) {
+        if (permission === Permission.Write) {
+            return [ODRL('write'), ODRL('modify')];
+        }
+
+        return [ODRL(permission.toLowerCase())];
+    }
+
+    private getOdrlActionNameForInsert(permission: Permission) {
+        return permission === Permission.Write ? 'modify' : permission.toLowerCase();
+    }
+
+    private isClientGeneratedRuleId(ruleId: string) {
+        return ruleId.startsWith('http://example.org/rule');
+    }
+
+    private ruleMatchesAssignee(ruleId: string, assignee: string, store: ReturnType<PolicyParser['parseText']>) {
+        if (assignee === "") {
+            return store.getQuads(namedNode(ruleId), ODRL("assignee"), null, null).length === 0;
+        }
+
+        return store.getQuads(namedNode(ruleId), ODRL("assignee"), namedNode(assignee), null).length > 0;
+    }
+
     public async fetchPolicies(_webId: string) {
 
         // Get all our policies
@@ -60,7 +84,7 @@ export class ODRLPolicyService {
     }
 
     public async postPolicy(webId: string, body: string) {
-        await fetch(UMA_URL(this.authorizationServerURL), {
+        const response = await fetch(UMA_URL(this.authorizationServerURL), {
             method: 'POST',
             headers: {
                 'Authorization': await getBearerAuthorizationHeader(),
@@ -69,10 +93,14 @@ export class ODRLPolicyService {
             },
             body: body
         })
+
+        if (!response.ok) {
+            throw new Error(`Policy creation failed: ${response.status}`);
+        }
     }
 
     public async patchPolicy(webId: string, policyId: string, body: string) {
-        await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
+        const response = await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
             method: 'PATCH',
             headers: {
                 'Authorization': await getBearerAuthorizationHeader(),
@@ -80,6 +108,10 @@ export class ODRLPolicyService {
             },
             body: body
         })
+
+        if (!response.ok) {
+            throw new Error(`Policy update failed: ${response.status}`);
+        }
     }
 
 
@@ -115,19 +147,25 @@ export class ODRLPolicyService {
 
 
         for (const action of actions) {
+            const matchingRule = ruleIds.find(ruleId =>
+                this.ruleMatchesAssignee(ruleId.id, assignee, store)
+                && this.getOdrlActions(action).some(odrlAction => store.getQuads(ruleId, ODRL('action'), odrlAction, null).length > 0)
+            );
+            if (matchingRule) continue;
+
             // We need a proper way to create new rules, probably better server side? 
             const ruleId = `http://example.org/rule${this.getRandomString(20)}`;
 
             // Define the new triples in the rule
-            const actionTriple = `odrl:action odrl:${action.toLowerCase()} ;`;
+            const actionTriple = `odrl:action odrl:${this.getOdrlActionNameForInsert(action)} ;`;
             const assigneeTriple = assignee
                 ? `odrl:assignee <${assignee}> ;`
                 : "";
 
             // The response contains the full and updated version of the policy, which we cannot return in this interface
             // If there already exists a policy for this target, patch this rule into it. Otherwise, just post a new one
-            const response = policyIds.size > 0
-                ? this.patchPolicy(webId, policyId, `
+            if (policyIds.size > 0) {
+                await this.patchPolicy(webId, policyId, `
 PREFIX odrl: <http://www.w3.org/ns/odrl/2/>
 INSERT {
     <${policyId}> odrl:permission <${ruleId}> .
@@ -138,8 +176,10 @@ INSERT {
         odrl:assigner <${webId}> .
 }
 WHERE {}`)
+            }
 // ! this branch below has no use, as the current version of LOAMA is unable to create new policies on its own, it can only discover the policies already sent.
-                : this.postPolicy(webId, `
+            else {
+                await this.postPolicy(webId, `
 @prefix odrl: <http://www.w3.org/ns/odrl/2/> .
 <${policyId}> a odrl:${assignee ? 'Agreement' : 'Set'} ;
     odrl:uid <${policyId}> ;
@@ -151,6 +191,7 @@ WHERE {}`)
     ${assigneeTriple}
     odrl:assigner <${webId}> .
 `)
+            }
         }
     }
 
@@ -182,15 +223,23 @@ WHERE {}`)
         // 3: Find all rules with our target
         const targetRules = store.getQuads(null, ODRL("target"), namedNode(targetId), null);
 
-        const policyIds = new Map<string, Set<string>>();
+        const ruleCandidates = new Map<Permission, Map<string, Set<string>>>();
+        const addRuleCandidate = (action: Permission, policyId: string, ruleId: string) => {
+            if (!ruleCandidates.has(action)) ruleCandidates.set(action, new Map<string, Set<string>>());
+            if (!ruleCandidates.get(action)!.has(policyId)) ruleCandidates.get(action)!.set(policyId, new Set<string>());
+            ruleCandidates.get(action)!.get(policyId)!.add(ruleId);
+        }
+
         targetRules.forEach(
             // Filter only the targets that have rules with us as assignee, or public if no assignee
             target => {
                 // Search the rule of the target, and then the policy of the rule, only for permission (for now)
                 const rule = target.subject;
                 const matches = store.getQuads(null, ODRL("permission"), rule, null);
-                if (matches.length === 0)
+                if (matches.length === 0) {
                     console.warn("out of bounds rule");
+                    return;
+                }
                 const policyId = matches[0].subject.id;
 
                 // We now have the policies that have our target, check if our assignee has an action to delete here
@@ -198,18 +247,16 @@ WHERE {}`)
                     // If no assignee specified, the rule is public and it has an action to be deleted, select it
                     if (store.getQuads(rule, ODRL("assignee"), null, null).length === 0) {
                         for (const action of actions)
-                            if (store.getQuads(rule, ODRL("action"), ODRL(action.toLowerCase()), null).length > 0) {
-                                if (!policyIds.has(policyId)) policyIds.set(policyId, new Set<string>());
-                                policyIds.get(policyId)!.add(rule.id);
+                            if (this.getOdrlActions(action).some(odrlAction => store.getQuads(rule, ODRL("action"), odrlAction, null).length > 0)) {
+                                addRuleCandidate(action, policyId, rule.id);
                             }
                     }
                 } else {
                     // Do the same, with a check if the assignee is correct
                     if (store.getQuads(rule, ODRL("assignee"), namedNode(assignee), null).length >= 1) {
                         for (const action of actions) {
-                            if (store.getQuads(rule, ODRL("action"), ODRL(action.toLowerCase()), null).length > 0) {
-                                if (!policyIds.has(policyId)) policyIds.set(policyId, new Set<string>());
-                                policyIds.get(policyId)!.add(rule.id);
+                            if (this.getOdrlActions(action).some(odrlAction => store.getQuads(rule, ODRL("action"), odrlAction, null).length > 0)) {
+                                addRuleCandidate(action, policyId, rule.id);
                             }
                         }
 
@@ -217,6 +264,24 @@ WHERE {}`)
                 }
             }
         )
+
+        const policyIds = new Map<string, Set<string>>();
+        ruleCandidates.forEach(policyRules => {
+            const serverRuleIds = [...policyRules.values()]
+                .flatMap(ruleIds => [...ruleIds])
+                .filter(ruleId => !this.isClientGeneratedRuleId(ruleId));
+
+            policyRules.forEach((ruleIds, policyId) => {
+                const selectedRuleIds = serverRuleIds.length > 0
+                    ? [...ruleIds].filter(ruleId => !this.isClientGeneratedRuleId(ruleId))
+                    : [...ruleIds];
+
+                for (const ruleId of selectedRuleIds) {
+                    if (!policyIds.has(policyId)) policyIds.set(policyId, new Set<string>());
+                    policyIds.get(policyId)!.add(ruleId);
+                }
+            });
+        });
 
         // 4: Delete the rule that has the matching target and permission for the matching assignee
         for (const policyId of policyIds.keys()) {

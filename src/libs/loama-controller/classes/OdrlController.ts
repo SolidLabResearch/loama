@@ -128,8 +128,6 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
 
             return permissions
 
-        } catch (error) {
-            return []
         } finally {
             release();
         }

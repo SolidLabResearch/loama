@@ -130,17 +130,6 @@ export abstract class ODRLPermissionManager<T extends Record<keyof T, BaseSubjec
                 existingEntry.targetId = existingEntry.targetId ?? entry.targetId;
             };
 
-            // Add the owner information
-            addSubjectPermissions({
-                subject: {
-                    type: "webId",
-                    selector: { url: target.assigner }
-                } as unknown as T[K],
-                permissions: [Permission.Append, Permission.Create, Permission.Delete, Permission.Read, Permission.Write],
-                isEnabled: true,
-                targetId: target.targetUrl
-            })
-
             // Add the public information
             if (target.public && target.public.permissions.size > 0) addSubjectPermissions({
                 subject: {
