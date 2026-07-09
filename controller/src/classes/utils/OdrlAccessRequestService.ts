@@ -25,7 +25,7 @@ export class ODRLAccessRequestService {
                 headers: {
                     'authorization': `WebID ${encodeURIComponent(requestingParty)}`,
                     'content-type': 'text/turtle'
-                }, body: await this.accessRequestToTtl({
+                }, body: await this.accessRequestToJson({
                     uid: uuid(),
                     target: resourceURL,
                     action: action,
@@ -38,19 +38,11 @@ export class ODRLAccessRequestService {
         if (response.status !== 201) throw new Error('failed to create access request');
     }
 
-    private accessRequestToTtl = async (accessRequest: AccessRequest): Promise<string> => `
-        @prefix ex: <http://example.org/> .
-        @prefix sotw: <https://w3id.org/force/sotw#> .
-        @prefix dcterms: <http://purl.org/dc/terms/> .
-        @prefix odrl: <http://www.w3.org/ns/odrl/2/> .
-        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-
-        ex:${accessRequest.uid} a sotw:EvaluationRequest ;
-                             dcterms:issued "${new Date().toISOString()}"^^xsd:datetime ;
-                             sotw:requestedTarget <${accessRequest.target}> ;
-                             sotw:requestedAction odrl:${accessRequest.action} ;
-                             sotw:requestingParty <${accessRequest.requestingParty}> ;
-                             ex:requestStatus ex:${accessRequest.status} .
+    private accessRequestToJson = async (accessRequest: AccessRequest): Promise<string> => `
+        {
+            "resource_id": "${accessRequest.target}",
+            "resource_scopes": [ "http://www.w3.org/ns/odrl/2/${accessRequest.action}" ]
+        }
     `;
 
     /**
@@ -136,7 +128,7 @@ export class ODRLAccessRequestService {
 
     private readonly cleanValue = (val?: string): string => {
         if (!val) return '';
-        const match = val.match(/^http:\/\/.*\/(.*)$/);
+        const match = val.match(/([^/#]+)$/);
         return (match ? match[1] : val).toLowerCase();
     }
 
@@ -151,7 +143,7 @@ export class ODRLAccessRequestService {
                  sotw:requestedTarget ?target ;
                  sotw:requestedAction ?action ;
                  sotw:requestingParty <${requestingPartyID}> ;
-                 ex:requestStatus ?status .
+                 sotw:requestStatus ?status .
         }
     `;
 
@@ -169,7 +161,7 @@ export class ODRLAccessRequestService {
                     sotw:requestedTarget ?target ;
                     sotw:requestedAction ?action ;
                     sotw:requestingParty ?requestingParty ;
-                    ex:requestStatus ?status .
+                    sotw:requestStatus ?status .
         }
     `;
 }
