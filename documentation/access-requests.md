@@ -53,7 +53,7 @@ If no policy matches the target resource, the user interface hides the access re
 ### Windows (PowerShell)
 
 
-Give Carol append access to Bob's readme, *(This is append since Alice requests read-permissions later in the demo)*
+Give Alice append access to Bob's readme, *(This is append since Alice requests read-permissions later in the demo)*
 ```powershell
 curl.exe --location 'http://localhost:4000/uma/policies' --header 'Authorization: WebID http%3A%2F%2Flocalhost%3A3000%2Fbob%2Fprofile%2Fcard%23me' --header 'Content-Type: text/plain' --data-raw '@prefix ex: <http://example.org/>. @prefix odrl: <http://www.w3.org/ns/odrl/2/> . @prefix dct: <http://purl.org/dc/terms/>. ex:policy a odrl:Agreement ; odrl:uid ex:policy ; odrl:permission ex:permission .ex:permission a odrl:Permission ; odrl:action odrl:append ; odrl:target <http://localhost:3000/bob/README> ; odrl:assignee <http://localhost:3000/alice/profile/card#me> ; odrl:assigner <http://localhost:3000/bob/profile/card#me> .'
 ```
@@ -65,9 +65,12 @@ curl.exe --location 'http://localhost:4000/uma/policies' --header 'Authorization
 
 ### Unix (Bash/Zsh)
 
+Give Alice append access to Bob's readme, *(This is append since Alice requests read-permissions later in the demo)*
 ```sh
 curl --location 'http://localhost:4000/uma/policies' --header 'Authorization: WebID http%3A%2F%2Flocalhost%3A3000%2Fbob%2Fprofile%2Fcard%23me' --header 'Content-Type: text/plain' --data-raw '@prefix ex: <http://example.org/>. @prefix odrl: <http://www.w3.org/ns/odrl/2/> . @prefix dct: <http://purl.org/dc/terms/>. ex:policy a odrl:Agreement ; odrl:uid ex:policy ; odrl:permission ex:permission .ex:permission a odrl:Permission ; odrl:action odrl:append ; odrl:target <http://localhost:3000/bob/README> ; odrl:assignee <http://localhost:3000/alice/profile/card#me> ; odrl:assigner <http://localhost:3000/bob/profile/card#me> .'
 ```
+
+Give bob read acces to Alice's readme
 ```sh
 curl --location 'http://localhost:4000/uma/policies' --header 'Authorization: WebID http%3A%2F%2Flocalhost%3A3000%2Falice%2Fprofile%2Fcard%23me' --header 'Content-Type: text/turtle' --data-raw '@prefix ex: <http://example.org/>. @prefix odrl: <http://www.w3.org/ns/odrl/2/> . @prefix dct: <http://purl.org/dc/terms/>. ex:policy1 a odrl:Agreement ; odrl:uid ex:policy1 ; odrl:permission ex:permission1 . ex:permission1 a odrl:Permission ; odrl:action odrl:read ; odrl:target <http://localhost:3000/alice/README> ; odrl:assignee <http://localhost:3000/bob/profile/card#me> ; odrl:assigner <http://localhost:3000/alice/profile/card#me> .'
 ```
