@@ -52,9 +52,13 @@ If no policy matches the target resource, the user interface hides the access re
 
 ### Windows (PowerShell)
 
+
+Give Carol append access to Bob's readme, *(This is append since Alice requests read-permissions later in the demo)*
 ```powershell
 curl.exe --location 'http://localhost:4000/uma/policies' --header 'Authorization: WebID http%3A%2F%2Flocalhost%3A3000%2Fbob%2Fprofile%2Fcard%23me' --header 'Content-Type: text/plain' --data-raw '@prefix ex: <http://example.org/>. @prefix odrl: <http://www.w3.org/ns/odrl/2/> . @prefix dct: <http://purl.org/dc/terms/>. ex:policy a odrl:Agreement ; odrl:uid ex:policy ; odrl:permission ex:permission .ex:permission a odrl:Permission ; odrl:action odrl:append ; odrl:target <http://localhost:3000/bob/README> ; odrl:assignee <http://localhost:3000/alice/profile/card#me> ; odrl:assigner <http://localhost:3000/bob/profile/card#me> .'
 ```
+
+Give bob read acces to Alice's readme
 ```powershell
 curl.exe --location 'http://localhost:4000/uma/policies' --header 'Authorization: WebID http%3A%2F%2Flocalhost%3A3000%2Falice%2Fprofile%2Fcard%23me' --header 'Content-Type: text/turtle' --data-raw '@prefix ex: <http://example.org/>. @prefix odrl: <http://www.w3.org/ns/odrl/2/> . @prefix dct: <http://purl.org/dc/terms/>. ex:policy1 a odrl:Agreement ; odrl:uid ex:policy1 ; odrl:permission ex:permission1 . ex:permission1 a odrl:Permission ; odrl:action odrl:read ; odrl:target <http://localhost:3000/alice/README> ; odrl:assignee <http://localhost:3000/bob/profile/card#me> ; odrl:assigner <http://localhost:3000/alice/profile/card#me> .'
 ```
@@ -71,17 +75,17 @@ curl --location 'http://localhost:4000/uma/policies' --header 'Authorization: We
 ## Verification workflows
 
 ### Session setup
-1. Open `http://localhost:5173/` in your standard browser window and authenticate as Bob (`bob@example.org`).
-2. Open a private/incognito browser window and authenticate as Alice (`alice@example.org`).
+1. Open `http://localhost:5173/` in your standard browser window, use IDP `http://localhost:3000` and authenticate as Bob (`bob@example.org`, `abc123`).
+2. Open a private/incognito browser window and authenticate as Alice (`alice@example.org`, `abc123`).
 
 ### Testing the denial flow
-1. From Alice's session, navigate to the **Request Access** tab and request access to Bob's resource.
+1. From Alice's session, navigate to the **Request Access** tab and request access to Bob's resource `http://localhost:3000/bob/README`.
 2. In Bob's session, navigate to the **Grant Access** tab.
 3. Click **Deny**.
 4. Confirm that the request is removed from Bob's pending list.
 
 ### Testing the approval flow
-1. From Alice's session, submit another access request to Bob's resource.
+1. From Alice's session, submit another access request to Bob's resource `http://localhost:3000/bob/README`.
 2. In Bob's session under the **Grant Access** tab, click **Accept**.
 3. Verify that the request appears in Alice's **Accepted** tab.
 4. Verify that the request appears in Bob's **Accepted** tab.
@@ -103,7 +107,11 @@ curl.exe --% --location "http://localhost:4000/uma/requests" --header "Authoriza
 ```
 
 ### Request checking
-You can evaluate state machine accuracy after an approval using the ``trustflows-client``. 
+You can evaluate state machine accuracy after an approval using the ``trustflows-client``. *Note we used v0.1.0-alpha.6*
+
+```
+npm install trustflows-client@0.1.0-alpha.6
+```
 
 ```ts
 import { getDefaultAuth, configureDefaultAuth } from "trustflows-client";
