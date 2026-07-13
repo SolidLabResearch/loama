@@ -23,8 +23,7 @@ export class ODRLAccessRequestService {
             `${this.authorizationServerURL}/requests`, {
                 method: 'POST',
                 headers: {
-                    'authorization': `WebID ${encodeURIComponent(requestingParty)}`,
-                    'content-type': 'text/turtle'
+                    'authorization': `WebID ${encodeURIComponent(requestingParty)}`
                 }, body: await this.accessRequestToJson({
                     uid: uuid(),
                     target: resourceURL,
@@ -126,6 +125,11 @@ export class ODRLAccessRequestService {
         return results;
     }
 
+
+    /**
+     * Retrieves last part of URI.
+     * @param val - URI
+     */
     private readonly cleanValue = (val?: string): string => {
         if (!val) return '';
         const match = val.match(/([^/#]+)$/);
