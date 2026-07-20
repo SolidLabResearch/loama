@@ -1,6 +1,6 @@
-import { AccessRequest } from "@/types/modules";
+import { Constraint, AccessRequest } from "@/types/modules";
 import { QueryEngine } from "@comunica/query-sparql";
-import { Parser, Store } from "n3";
+import { Parser, Store, Writer } from "n3";
 import { v4 as uuid } from 'uuid';
 
 export class ODRLAccessRequestService {
@@ -18,31 +18,47 @@ export class ODRLAccessRequestService {
      * @param requestingParty - user credentials of the requesting party
      * @param action - the action the user wants to perform on the resource
      */
-    public requestAccess = async (resourceURL: string, requestingParty: string, action: string): Promise<void> => {
+    public requestAccess = async (accessRequest: AccessRequest): Promise<void> => {
         const response = await fetch(
             `${this.authorizationServerURL}/requests`, {
                 method: 'POST',
                 headers: {
-                    'authorization': `WebID ${encodeURIComponent(requestingParty)}`
-                }, body: await this.accessRequestToJson({
-                    uid: uuid(),
-                    target: resourceURL,
-                    action: action,
-                    requestingParty: requestingParty,
-                    status: 'requested'
-                })
+                    'authorization': `WebID ${encodeURIComponent(accessRequest.requestingParty)}`
+                }, body: await this.accessRequestToJson(accessRequest)
             }
         );
 
         if (response.status !== 201) throw new Error('failed to create access request');
     }
 
-    private accessRequestToJson = async (accessRequest: AccessRequest): Promise<string> => `
-        {
-            "resource_id": "${accessRequest.target}",
-            "resource_scopes": [ "http://www.w3.org/ns/odrl/2/${accessRequest.action}" ]
+    private accessRequestToJson = async (accessRequest: AccessRequest): Promise<string> => {
+        const payload: any = {
+            resource_id: accessRequest.target,
+            resource_scopes: [
+                accessRequest.action.startsWith('http') 
+                    ? accessRequest.action 
+                    : `http://www.w3.org/ns/odrl/2/${accessRequest.action}`
+            ]
+        };
+
+        const constraintsList: any[] = [];
+
+        if (accessRequest.constraint && accessRequest.constraint.length > 0) {
+            accessRequest.constraint.forEach(con => {
+                constraintsList.push([
+                    con.LeftOperand,
+                    con.Operand,
+                    con.RightOperand
+                ]);
+            });
         }
-    `;
+
+        if (constraintsList.length > 0) {
+            payload.constraints = constraintsList;
+        }
+
+        return JSON.stringify(payload, null, 12);
+    };
 
     /**
      * Place a PATCH request to update an access request to an UMA backend
@@ -117,6 +133,7 @@ export class ODRLAccessRequestService {
                 uid: binding.get('uid')?.value!,
                 target: binding.get('target')?.value!,
                 action: this.cleanValue(binding.get('action')?.value),
+                constraint: [], //ToDO
                 requestingParty: binding.get('requestingParty')?.value!,
                 status: this.cleanValue(binding.get('status')?.value),
             })

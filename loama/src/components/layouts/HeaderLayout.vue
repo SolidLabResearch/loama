@@ -4,6 +4,7 @@
             <HeaderTab class="header-tab" href="/home/" tooltip="manage your resources" active>Resources</HeaderTab>
             <HeaderTab class="header-tab" href="/access-requests/" tooltip="manage your access requests or request access to a resource" active>Request Access</HeaderTab>
             <HeaderTab class="header-tab" href="/access-grants/" tooltip="manage incoming access requests and grant access to your resources" active>Grant Access</HeaderTab>
+            <HeaderTab class="header-tab" href="/policy-view/" tooltip="WIP" active>Policies</HeaderTab>
         </HeaderBase>
     </Suspense>
     <router-view />

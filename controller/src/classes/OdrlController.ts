@@ -1,11 +1,13 @@
 import { getDefaultSession } from "@inrupt/solid-client-authn-browser";
 import { BaseSubject, Index, IndexItem, Permission, ResourcePermissions, Resources } from "../types";
 import { IAccessRequest, IController, IInboxConstructor, IStore, IStoreConstructor, SubjectConfig, SubjectConfigs, SubjectKey, SubjectType } from "../types/modules";
-import { type AccessRequest as AccessRequestObject } from "../types/modules";
+import { type AccessRequest as AccessRequestObject, Policy, Rule, RuleUpdate } from "../types/modules";
 import { AccessRequest } from "./accessRequests/AccessRequest";
 import { ODRLAccessRequest } from "./accessRequests/OdrlAccessRequest";
 import { Mutex } from "./utils/Mutex";
 import { ODRLAccessRequestService } from "./utils/OdrlAccessRequestService";
+import { ODRLPolicyService } from "./utils/OdrlPolicyService";
+import { PolicyInterpreter } from "./utils/PolicyInterpreter";
 
 /**
  * Controller which makes it calls to the backend AS through ODRL requests.
@@ -78,25 +80,6 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
         } as IndexItem<T[K]>
     }
 
-    async addPermission<K extends SubjectKey<T>>(resourceUrl: string, addedPermission: Permission, subject: SubjectType<T, K>) {
-        const release = await this.acquire();
-        try {
-
-            // 1. Create a new permission for the subject
-            await this.getSubjectConfig(subject).manager.createPermissions(resourceUrl, subject, [addedPermission])
-
-            // 2. Let the manager add the permission, return the updated version
-            const webId = getDefaultSession().info.webId!;
-            const permissions = await this.getSubjectConfig(subject).manager.getTargetPermissionsForUser(webId, subject.selector?.url ?? "", resourceUrl);
-
-            return permissions;
-        } catch (e) {
-            throw e;
-        } finally {
-            release();
-        }
-    }
-
     async removeSubject<K extends SubjectKey<T>>(resourceUrl: string, subject: SubjectType<T, K>) {
         const subjectConfig = this.getSubjectConfig(subject);
         const item = await this.getItem(resourceUrl, subject);
@@ -104,25 +87,26 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
         await subjectConfig.manager.deletePermissions(resourceUrl, subject, item?.permissions ?? []);
     }
 
-    async removePermission<K extends SubjectKey<T>>(resourceUrl: string, removedPermission: Permission, subject: SubjectType<T, K>) {
-        const release = await this.acquire()
-        try {
-
-            // 1. Delete a permission for the subject
-            await this.getSubjectConfig(subject).manager.deletePermissions(resourceUrl, subject, [removedPermission]);
-
-            // 2. Let the manager delete the permission, return the updated version
-            const webId = getDefaultSession().info.webId!;
-            const permissions = await this.getSubjectConfig(subject).manager.getTargetPermissionsForUser(webId, subject.selector!.url, resourceUrl);
-
-            return permissions
-
-        } catch (error) {
-            return []
-        } finally {
-            release();
+    async updatePolicy(updates: RuleUpdate[]): Promise<void> {
+        console.log("updatePolicy");
+        const webId = getDefaultSession().info.webId!;
+        const service = new ODRLPolicyService(this.authorizationServerURL);
+        // Applied sequentially so a later update in the batch can safely depend on
+        // an earlier one having landed (e.g. edit right after add of the same rule).
+        for (const update of updates) {
+            await service.applyRuleUpdate(webId, update);
         }
     }
+
+    async getResourcePolicies(resourceUrl: string): Promise<Policy[]> {
+        const webId = getDefaultSession().info.webId;
+        if (!webId) {
+            throw new Error("User not logged in");
+        }
+        const store = await new ODRLPolicyService(this.authorizationServerURL).fetchPolicies(webId);
+        return new PolicyInterpreter().storeToPolicies(store, resourceUrl);
+    }
+
 
     async enablePermissions<K extends SubjectKey<T>>(resource: string, subject: SubjectType<T, K>) {
         // won't fix
@@ -156,9 +140,10 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
     }
 
     // ! added for access requests
-    async requestAccess(permission: { action: string; resource: string; }): Promise<void> {
+    async requestAccess(permission: { accessRequest: AccessRequestObject}): Promise<void> {
         const webid = getDefaultSession().info.webId!;
-        await new ODRLAccessRequestService(this.authorizationServerURL).requestAccess(permission.resource, webid, permission.action);
+        permission.accessRequest.requestingParty = webid;
+    await new ODRLAccessRequestService(this.authorizationServerURL).requestAccess(permission.accessRequest);
     }
 
     async handleAccessRequest(requestId: string, status: 'accepted' | 'denied'): Promise<void> {

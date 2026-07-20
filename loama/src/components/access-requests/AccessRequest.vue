@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, type Ref } from 'vue';
-import type { AccessRequest } from 'loama-controller';
+import type { AccessRequest, Constraint } from 'loama-controller';
 import AccessRequestEntry from './AccessRequestEntry.vue';
 import { useControllerStore } from '@/stores/useControllerStore';
 
@@ -11,6 +11,9 @@ const accessRequests: Ref<AccessRequest[]> = ref([]);
 const accessRequestParams = ref({
   target: '',
   action: '',
+  purposes: [] as string[],
+  startTime: '',
+  endTime: '',
 });
 
 const mode = ref<'list' | 'create'>('list');
@@ -23,11 +26,11 @@ const errors = ref<{ target: boolean; action: boolean }>({
 const validate = () => {
   errors.value.target = !accessRequestParams.value.target.trim();
   errors.value.action = !accessRequestParams.value.action.trim();
-  return !(errors.value.target || errors.value.action);
+  return !(errors.value.target || errors.value.action );
 };
 
 const clear = () => {
-  accessRequestParams.value = { target: '', action: '' };
+  accessRequestParams.value = { target: '', action: '' , purposes: [], startTime: '', endTime: '',};
   mode.value = 'list';
   errors.value = { target: false, action: false };
 };
@@ -35,13 +38,47 @@ const clear = () => {
 const addAccessRequest = async () => {
   if (!validate()) return;
   
+  const constraints: Constraint[] = [];
+
+  accessRequestParams.value.purposes.forEach(purpose => {
+    constraints.push({
+      LeftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
+      Operand: 'http://www.w3.org/ns/odrl/2/eq',
+      RightOperand: purpose.startsWith('http') ? purpose : `https://w3id.org/dpv#${purpose.replace('dpv:', '')}`
+    });
+  });
+
+  if (accessRequestParams.value.startTime) {
+    const startIso = new Date(accessRequestParams.value.startTime).toISOString();
+    constraints.push({
+      LeftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
+      Operand: 'http://www.w3.org/ns/odrl/2/gt',
+      RightOperand: `"${startIso}""^^xsd:dateTime"`
+    });
+  }
+
+  if (accessRequestParams.value.endTime) {
+    const endIso = new Date(accessRequestParams.value.endTime).toISOString();
+    constraints.push({
+      LeftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
+      Operand: 'http://www.w3.org/ns/odrl/2/lt',
+      RightOperand: `"${endIso}""^^xsd:dateTime"`
+    });
+  }
+
   await controllerStore.current.requestAccess({
-    action: accessRequestParams.value.action,
-    resource: accessRequestParams.value.target
+    accessRequest: {
+      uid: `http://example.org/request/${crypto.randomUUID()}`,
+      target: accessRequestParams.value.target,
+      action: accessRequestParams.value.action,
+      constraint: constraints,
+      requestingParty: '', //ToDo
+      status: 'Requested'
+    }
   });
 
   await fetchAccessRequests();
-  mode.value = 'list';
+  clear();
 };
 
 const fetchAccessRequests = async (): Promise<void> => {
@@ -85,6 +122,19 @@ onBeforeUnmount(() => clearInterval(interval));
           <option value="create">create</option>
           <option value="control">control</option>
         </select>
+
+        <label for="purpose">Purpose</label>
+        <select name="purpose" id="purpose" multiple v-model="accessRequestParams.purposes">
+            <option value="dpv:AccountManagement">dpv:AccountManagement</option>
+            <option value="dpv:CommercialPurpose">dpv:CommercialPurpose</option>
+            <option value="dpv:CommunicationManagement">dpv:CommunicationManagement</option>
+            <option value="dpv:CustomerManagement">dpv:CustomerManagement</option>
+        </select>
+
+        <label for="StartTime">Start Time</label>
+        <input type="datetime-local" id="StartTime" v-model="accessRequestParams.startTime">
+        <label for="EndTime">End Time</label>
+        <input type="datetime-local" id="EndTime" v-model="accessRequestParams.endTime">
 
         <div class="actions">
           <button class="primary" @click.prevent="addAccessRequest">request access</button>

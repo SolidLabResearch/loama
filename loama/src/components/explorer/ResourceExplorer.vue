@@ -3,9 +3,9 @@
         <div class="left-panel">
             <Button @click="refresh">Refresh</Button> <!-- let the user refresh manually without pressing F5 in order to retrieve new resources -->
             <ExplorerBreadcrumbs /> 
-            <ExplorerEntry v-for="resource in podStore.formattedEntries" :key="resource.resourceUrl"
-                @click="changeSelectedEntry(resource)" :isContainer="resource.isContainer" :authProtected="false"
-                :url="resource.name + '/'">{{ resource.name }}
+            <ExplorerEntry v-for="policy in podStore.policies" :key="policy.id"
+                @click="changeSelectedPolicy(policy)" :isContainer="false" :authProtected="false"
+                :url="policy.id + '/'">{{ policy.id }}
 
             </ExplorerEntry>
         </div>
@@ -17,7 +17,7 @@
                     <i>Select one to get started</i>
                 </div>
             </div>
-            <SelectedEntry v-else @close="() => changeSelectedEntry(null)" />
+            <SelectedEntry v-else @close="() => changeSelectedPolicy(null)" />
         </div>
     </div>
 </template>
@@ -33,6 +33,7 @@ import type { Entry } from "@/lib/types";
 import { usePodStore } from '@/lib/state';
 import SelectedEntry from './SelectedEntry.vue';
 import { useControllerStore } from '@/stores/useControllerStore';
+import type { Policy } from 'loama-controller';
 
 const route = useRoute();
 const podStore = usePodStore();
@@ -40,7 +41,7 @@ const controllerStore = useControllerStore()
 
 await podStore.loadResources(store.usedPod, controllerStore.current);
 
-const changeSelectedEntry = (entry: Entry | null) => podStore.selectedEntry = entry;
+const changeSelectedPolicy = (policy: Policy | null) => podStore.selectedEntry = policy;
 
 const fileUrl = (path: string | string[]) => `${store.usedPod}${path}`
 
