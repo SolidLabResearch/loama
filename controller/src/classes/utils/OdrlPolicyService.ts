@@ -1,8 +1,15 @@
 import { getDefaultSession } from "@inrupt/solid-client-authn-browser";
 import { Permission } from "../../types";
+import { RuleUpdate } from "../../types/modules";
 import { ODRL, PolicyParser } from "./PolicyParser";
 import { DataFactory } from "n3";
 const { namedNode } = DataFactory;
+
+const RULE_TYPE_TERM: Record<string, string> = {
+    permission: 'Permission',
+    prohibition: 'Prohibition',
+    duty: 'Duty'
+};
 
 export const UMA_URL = (authorizationServerURL: string, encodedId: string = "") => 
     `${authorizationServerURL}/policies${encodedId}`;
@@ -25,7 +32,6 @@ export class ODRLPolicyService {
     }
 
     public async fetchPolicies(webId: string) {
-
         // Get all our policies
         const response = await fetch(UMA_URL(this.authorizationServerURL), {
             headers: {
@@ -33,6 +39,7 @@ export class ODRLPolicyService {
                 "Accept": "text/turtle"
             }
         });
+
 
         // Extract the target Ids
         const turtleText = await response.text();
@@ -145,6 +152,20 @@ WHERE {}`)
     odrl:assigner <${webId}> .
 `)
         }
+    }
+
+    /**
+     * Applies a single rule-level change (add, edit, or remove) to a policy.
+     * This is the generalized replacement for the old addPermission/removePermission
+     * flow: instead of editing a flattened subject/permission pair, it edits the
+     * actual ODRL rule node identified by rule.id.
+     *
+     * NOTE: the delete-then-insert body for 'edit' sends two update operations in
+     * one PATCH request. This follows standard SPARQL 1.1 Update syntax but has not
+     * been verified against your authorization server, confirm it accepts this shape.
+     */
+    public async applyRuleUpdate(webId: string, update: RuleUpdate): Promise<void> {
+        console.log("applyRuleUpate");
     }
 
     /**

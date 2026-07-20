@@ -16,8 +16,10 @@ export interface IController<T extends Record<keyof T, BaseSubject<keyof T & str
     getLabelForSubject<K extends SubjectKey<T>>(subject: T[K]): string;
     getOrCreateIndex(): Promise<Index>;
     getItem<K extends SubjectKey<T>>(resourceUrl: string, subject: SubjectType<T, K>): Promise<IndexItem<T[K]> | undefined>;
-    addPermission<K extends SubjectKey<T>>(resourceUrl: string, addedPermission: Permission, subject: SubjectType<T, K>): Promise<Permission[]>
-    removePermission<K extends SubjectKey<T>>(resourceUrl: string, addedPermission: Permission, subject: SubjectType<T, K>): Promise<Permission[]>
+    
+    updatePolicy(updates: RuleUpdate[]): Promise<void>;
+    getResourcePolicies(resourceUrl: string): Promise<Policy[]>;
+    
     /**
     * Enables a the permissions for an existing subject
     * @throws Error if the item does not exist for the given subject
@@ -36,7 +38,7 @@ export interface IController<T extends Record<keyof T, BaseSubject<keyof T & str
     isSubjectSupported<T extends string>(subject: BaseSubject<T>): IController<Record<T, BaseSubject<T>>>
 
     // ! added for access requests
-    requestAccess(permission: { action: string, resource: string }): Promise<void>;
+    requestAccess(permission: { accessRequest: AccessRequest}): Promise<void>;
     handleAccessRequest(requestId: string, status: string): Promise<void>;
     getAccessRequests(): Promise<{ asRequestingParty: AccessRequest[]; asResourceOwner: AccessRequest[]; }>;
 }
@@ -177,11 +179,19 @@ export interface IRule {
     id: string;
 }
 
+export interface Constraint {
+	leftOperand: string;
+	operator: string;
+	rightOperand: string[];
+}
+
+
 // interface to represent access requests
 export interface AccessRequest {
     uid: string;
     target: string;
     action: string;
+    constraint: Constraint[];
     requestingParty: string;
     status: string;
 }
@@ -221,3 +231,30 @@ export interface TargetSubjects {
     // The rules referring to this target
     rules: Set<string>;
 }
+
+export type RuleUpdateType = 'add' | 'edit' | 'remove';
+
+export interface RuleUpdate {
+    updateType: RuleUpdateType;
+    rule: Rule;
+    policyId: string | null
+}
+
+
+export interface Rule {
+    id: string;
+    type: RuleType;
+    subjectId: string;
+    action: string[];
+    resourceIdentifier: string;
+    constraint: Constraint[]
+}
+
+export interface Policy {
+    id: string;
+    rules: Rule[];
+    type: PolicyType;
+    //optional state: enum // active, requested, denied
+}
+
+export type PolicyType = 'Agreement' | 'EvaluationRequest';

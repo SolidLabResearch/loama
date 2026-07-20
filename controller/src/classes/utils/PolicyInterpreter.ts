@@ -1,7 +1,8 @@
 import { Permission } from "../../types/";
-import { IPolicy, ISpecificTargetInfo, TargetSubjects } from "../../types/modules";
+import { Constraint, IPolicy, ISpecificTargetInfo, Policy, PolicyType, RuleType, Rule, TargetSubjects } from "../../types/modules";
 import { DataFactory, Parser, Store } from "n3";
 import { ODRL } from "./PolicyParser";
+//import { Rule } from "@inrupt/solid-client/acp/rule";
 
 const { namedNode } = DataFactory;
 
@@ -41,119 +42,90 @@ export class PolicyInterpreter {
      * @returns the target -> subjects -> permissions relation for all owned targets
      */
     public ownedPoliciesToObject = (store: Store, specifiedTarget: string = ""): TargetSubjects[] => {
-
-        // 1. Get every <rule> odrl:target <target> . quad, or only the rules targetting the specified target
-        // Note that multiple rules can refer to the same target, and one rule can refer to multiple targets
-        const relevantRuleSet: Set<string> = new Set((specifiedTarget === ""
-            ? store.getQuads(null, ODRL('target'), null, null)
-            : store.getQuads(null, ODRL('target'), namedNode(specifiedTarget), null))
-            .map(quad => quad.subject.id));
-
-        // 2. Add permission information for every target we find
-        // Every target ID corresponds with the subjects that each have some permissions etc.
-        const idToTarget: Map<string, TargetSubjects> = new Map<string, TargetSubjects>();
-        for (const ruleId of relevantRuleSet) {
-
-            // Get the policy information
-            // Since a valid policy only has unique ID's, we can just search for '<policy> <relation> <rule> .' quads on the entire store
-            const policyIDs: Set<string> = new Set();
-            for (const relation of ['permission'/*, 'prohibition', 'duty'*/].map(x => ODRL(x)))
-                store.getQuads(null, relation, namedNode(ruleId), null).forEach(res => policyIDs.add(res.subject.id));
-            if (policyIDs.size !== 1)
-                console.warn("Corrupted Policy");
-            const policyId = [...policyIDs][0];
-
-            // 2.1 Get the every quad defined by the rule (and their children recursively)
-            const ruleStore = this.extractQuadsRecursive(store, ruleId);
-
-            // 2.2 List all relevant actions for this rule
-            const permissions = [];
-            for (const quad of ruleStore.getQuads(null, ODRL('action'), null, null)) {
-                // TODO: find a way to categorize all actions as one of the Permission types 
-                const action = this.fromODRL(quad.object.id).toLowerCase();
-
-                switch (action) {
-                    case "read":
-                        permissions.push(Permission.Read);
-                        break;
-
-                    case "write":
-                        permissions.push(Permission.Write);
-                        break;
-
-                    case "append":
-                        permissions.push(Permission.Append);
-                        break;
-
-                    case "control":
-                        permissions.push(Permission.Control);
-                        break;
-
-                    case "create":
-                        permissions.push(Permission.Create);
-                        break;
-
-                    default:
-                        console.warn(`Unrecognized ODRL action: ${action}`);
-                }
-
-            }
-
-            // Get assigner ID
-            const assigner = ruleStore.getQuads(null, ODRL('assigner'), null, null)[0].object.id;
-            if (!assigner) throw new Error("Corrupted Policy");
-
-            // Get assignee IDs
-            const subjects: string[] = ruleStore.getQuads(null, ODRL('assignee'), null, null).map(quad => quad.object.id);
-
-            for (const target of ruleStore.getQuads(namedNode(ruleId), ODRL('target'), null, null).map(quad => quad.object.id)) {
-                // 2.3 Set the target's assigner if not already done
-                if (!idToTarget.has(target)) idToTarget.set(target, { assigner: assigner, targetUrl: target, policies: new Set(), rules: new Set() });
-                idToTarget.get(target)!.policies.add(policyId);
-                idToTarget.get(target)!.rules.add(ruleId);
-
-                // 2.4 Add the private assignee information for every target in the rule
-                for (const subject of subjects) {
-                    // If target does not have subjects yet, set a default object
-                    if (!idToTarget.get(target)!.private)
-                        idToTarget.get(target)!.private = new Map<string, ISpecificTargetInfo>();
-
-                    // If subject is new to the target, set its permissions to a new set
-                    if (!idToTarget.get(target)!.private!.has(subject))
-                        idToTarget.get(target)!.private!.set(subject, { uri: target, subject: subject, public: false, permissions: new Set() });
-
-                    // Add the permissions of this rule to the subject
-                    const targetObject: ISpecificTargetInfo = idToTarget.get(target)!.private!.get(subject)!;
-                    permissions.forEach(p => targetObject.permissions.add(p));
-                }
-
-                if (subjects.length === 0) {
-                    // If there is no public permission set, add one
-                    if (!idToTarget.get(target)!.public)
-                        idToTarget.get(target)!.public = { uri: target, public: true, subject: "", permissions: new Set() };
-
-                    // Add the permissions to the set
-                    const publicPermissions: Set<Permission> = idToTarget.get(target)!.public!.permissions;
-                    permissions.forEach(p => publicPermissions.add(p));
-                }
-            }
-        }
-
-        // Return the list of target info objects
-        return Array.from(idToTarget.values());
     }
 
     // Return the subject -> permissions relation for a target
     public permissionsForOneResource(resourceUrl: string, store: Store): TargetSubjects {
-        const targets = this.ownedPoliciesToObject(store, resourceUrl);
+    }
 
-        // Only return the target we need
-        const target = targets.filter(t => t.targetUrl === resourceUrl);
+    private readonly ruleRelations: RuleType[] = ['permission', 'prohibition', 'duty'];
 
-        if (target.length > 1) console.warn("Something went wrong while getting the permissions for", resourceUrl);
-        // Handle empty subjects
+    private extractConstraints(ruleStore: Store, ruleId: string): Constraint[] {
+    }
 
-        return target[0];
+    /**
+     * Unflattened version of permissionsForOneResource. Instead of collapsing every rule
+     * into a single subject -> permissions map, this keeps the real policy/rule structure
+     * so the UI (and updatePolicy) can operate on actual ODRL rules.
+     *
+     * A single ODRL rule can list multiple assignees. Since Rule only carries one
+     * subjectId, a rule with N assignees is expanded into N Rule entries that share
+     * the same id. A rule with no assignee becomes one Rule with subjectId "" (public).
+     *
+     * @param store the fetched policies
+     * @param resourceUrl if given, only rules targeting this resource are included
+     */
+    public storeToPolicies(store: Store, resourceUrl: string = ""): Policy[] {
+        let policies: Policy[] = [];
+        const policyNodes = store.getQuads(null, namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), namedNode("http://www.w3.org/ns/odrl/2/Agreement"), null);
+        const policyIds = policyNodes.map(quad => quad.subject.value);
+
+        policyIds.forEach(polId => {
+            const policy: Policy = {
+                id: polId,
+                rules: [],
+                type: 'Agreement'
+            };
+
+            const permissionNodes = store.getObjects(namedNode(polId), ODRL("permission"), null);
+            const permissionIds = permissionNodes.map(node => node.value);
+            permissionIds.forEach(permId => {
+                const permNamedNode = namedNode(permId);
+                const actionNodes = store.getObjects(permNamedNode, ODRL("action"), null);
+                const targetNodes = store.getObjects(permNamedNode, ODRL("target"), null);
+                const assigneeNodes = store.getObjects(permNamedNode, ODRL("assignee"), null);
+                const assignerNodes = store.getObjects(permNamedNode, ODRL("assigner"), null);
+                const constraintNodes = store.getObjects(permNamedNode, ODRL("constraint"), null);
+
+                const actions = actionNodes.map(node => node.value);
+                const targets = targetNodes.map(node => node.value); 
+                const assignees = assigneeNodes.map(node => node.value);
+                const assigners = assignerNodes.map(node => node.value);
+                const constraintIds = constraintNodes.map(node => node.value);
+
+                const permission: Rule = {
+                    id: permId,
+                    type: 'permission',
+                    subjectId: assignees[0],
+                    action: actions,
+                    resourceIdentifier: targets[0],
+                    constraint: []
+                }
+                
+                constraintIds.forEach(constrId =>{
+                    const constrNamedNode = namedNode(constrId);
+                    const leftOperandNodes = store.getObjects(constrNamedNode, ODRL("leftOperand"), null);
+                    const operatorNodes = store.getObjects(constrNamedNode, ODRL("operator"), null);
+                    const rightOperandNodes = store.getObjects(constrNamedNode, ODRL("rightOperand"), null);
+                    
+                    const leftOperand = leftOperandNodes[0]?.value;
+                    const operator = operatorNodes[0]?.value;
+                    const rightOperand = rightOperandNodes.map(node => node.value);
+
+                    const constraint: Constraint = {
+                        leftOperand: leftOperand,
+                        operator: operator,
+                        rightOperand: rightOperand
+                    };
+
+                    permission.constraint.push(constraint);
+                });
+                policy.rules.push(permission);
+            });
+            policies.push(policy);
+        });
+
+        return policies;
     }
 
 }

@@ -7,6 +7,7 @@ import HeaderLayout from '@/components/layouts/HeaderLayout.vue'
 import { useControllerStore } from '@/stores/useControllerStore'
 import AccessRequest from '@/components/access-requests/AccessRequest.vue'
 import AccessGrant from '@/components/access-grants/AccessGrant.vue'
+import PolicView from '@/components/policy-view/PolicyView.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -34,6 +35,11 @@ const router = createRouter({
                     path: '/access-grants/',
                     name: 'access-grants',
                     component: AccessGrant
+                },
+                {
+                    path: '/policy-view/',
+                    name: 'policy-view',
+                    component: PolicView
                 }
             ]
         }

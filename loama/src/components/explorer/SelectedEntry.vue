@@ -1,8 +1,8 @@
 <template>
     <div class="container" v-if="podStore.selectedEntry">
         <header>
-            <ExplorerEntity :is-container="podStore.selectedEntry.isContainer">
-                {{ podStore.selectedEntry.name }}
+            <ExplorerEntity :is-container="false">
+                {{ podStore.selectedEntry.id }}
             </ExplorerEntity>
             <PhXCircle :size="40" @click="$emit('close')" class="clickable" />
         </header>
@@ -12,15 +12,15 @@
                 <LoButton :left-icon="PhPencil" @click="() => permissionDrawerVisible = true">Edit</LoButton>
             </div>
             <div class="access-request-switch">
-                <ToggleSwitch :modelValue="podStore.selectedEntry.canRequestAccess"
+                <ToggleSwitch :modelValue="false"
                     @update:modelValue="handleSubjectRequestAccess" />
                 <span>Can people ask access to this resource?</span>
             </div>
             <p>Subjects with access:</p>
             <ul data-testid="sidepanel-permission-list">
-                <li :key="controllerStore.currentController.getLabelForSubject(permission.subject)"
-                    v-for="permission in podStore.selectedEntry.permissionsPerSubject">
-                    {{ controllerStore.currentController.getLabelForSubject(permission.subject) }}
+                <li :key="rule.id"
+                    v-for="rule in podStore.selectedEntry.rules">
+                    {{ rule.id }}
                 </li>
             </ul>
         </section>
