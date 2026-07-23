@@ -1,10 +1,10 @@
 import { Permission } from "../../types/";
 import { Constraint, IPolicy, ISpecificTargetInfo, Policy, PolicyType, RuleType, Rule, TargetSubjects } from "../../types/modules";
-import { DataFactory, Parser, Store } from "n3";
+import { DataFactory, Parser, Store, Writer } from "n3";
 import { ODRL } from "./PolicyParser";
 //import { Rule } from "@inrupt/solid-client/acp/rule";
 
-const { namedNode } = DataFactory;
+const { namedNode, literal } = DataFactory;
 
 export class PolicyInterpreter {
     private fromODRL = (odrlString: string) => odrlString.split('/')[6];
@@ -95,7 +95,7 @@ export class PolicyInterpreter {
 
                 const permission: Rule = {
                     id: permId,
-                    type: 'permission',
+                    type: 'Permission',
                     subjectId: assignees[0],
                     action: actions,
                     resourceIdentifier: targets[0],
@@ -126,6 +126,91 @@ export class PolicyInterpreter {
         });
 
         return policies;
+    }
+
+    public policyToTurtle(webId: string, policy: Policy): string {
+        const ODRL = 'http://www.w3.org/ns/odrl/2/';
+        const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+
+        const writer = new Writer({
+            prefixes: {
+            odrl: ODRL,
+            ex: 'http://example.org/'
+            }
+        });
+
+        const policyNode = namedNode(policy.id);
+
+        // 1. Policy Type & UID
+        writer.addQuad(policyNode, namedNode(RDF_TYPE), namedNode(`${ODRL}${policy.type}`));
+        writer.addQuad(policyNode, namedNode(`${ODRL}uid`), policyNode);
+
+        // 2. Rules
+        for (const rule of policy.rules) {
+            const ruleNode = namedNode(rule.id);
+            const ruleTypePredicate = rule.type.toLowerCase();
+
+            writer.addQuad(policyNode, namedNode(`${ODRL}${ruleTypePredicate}`), ruleNode);
+            writer.addQuad(ruleNode, namedNode(RDF_TYPE), namedNode(`${ODRL}${rule.type}`));
+
+            if (rule.resourceIdentifier) {
+            writer.addQuad(ruleNode, namedNode(`${ODRL}target`), namedNode(rule.resourceIdentifier));
+            }
+
+            if (rule.subjectId) {
+            writer.addQuad(ruleNode, namedNode(`${ODRL}assignee`), namedNode(rule.subjectId));
+            }
+
+            writer.addQuad(ruleNode, namedNode(`${ODRL}assigner`), namedNode(webId));
+
+            if (rule.action && rule.action.length > 0) {
+            for (const act of rule.action) {
+                const actionURI = act.startsWith('http') ? act : `${ODRL}${act}`;
+                writer.addQuad(ruleNode, namedNode(`${ODRL}action`), namedNode(actionURI));
+            }
+            }
+
+            // 3. Constraints
+            if (rule.constraint && rule.constraint.length > 0) {
+            for (let i = 0; i < rule.constraint.length; i++) {
+                const constraint = rule.constraint[i];
+                const constraintNode = namedNode(`${rule.id}/constraint/${i + 1}`);
+
+                writer.addQuad(ruleNode, namedNode(`${ODRL}constraint`), constraintNode);
+                writer.addQuad(constraintNode, namedNode(RDF_TYPE), namedNode(`${ODRL}Constraint`));
+
+                if (constraint.leftOperand) {
+                const leftUri = constraint.leftOperand.startsWith('http')
+                    ? constraint.leftOperand
+                    : `${ODRL}${constraint.leftOperand}`;
+                writer.addQuad(constraintNode, namedNode(`${ODRL}leftOperand`), namedNode(leftUri));
+                }
+
+                if (constraint.operator) {
+                const opUri = constraint.operator.startsWith('http')
+                    ? constraint.operator
+                    : `${ODRL}${constraint.operator}`;
+                writer.addQuad(constraintNode, namedNode(`${ODRL}operator`), namedNode(opUri));
+                }
+
+                if (constraint.rightOperand && constraint.rightOperand.length > 0) {
+                for (const operand of constraint.rightOperand) {
+                    const isUri = operand.startsWith('http://') || operand.startsWith('https://');
+                    const rightValue = isUri ? namedNode(operand) : literal(operand);
+                    writer.addQuad(constraintNode, namedNode(`${ODRL}rightOperand`), rightValue);
+                }
+                }
+            }
+            }
+        }
+
+        let turtleText = '';
+        writer.end((error, result) => {
+            if (error) throw error;
+            turtleText = result;
+        });
+
+        return turtleText;
     }
 
 }

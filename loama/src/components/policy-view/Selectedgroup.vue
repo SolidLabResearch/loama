@@ -7,26 +7,30 @@
             </button>
         </header>
         <section class="rule-section">
-            <h3>{{ sortedRules.length }} rule{{ sortedRules.length === 1 ? '' : 's' }}</h3>
-            <table class="rule-table">
-                <caption class="sr-only">Rules for {{ label }}</caption>
-                <thead>
-                    <tr>
-                        <th scope="col">{{ groupBy === 'subject' ? 'Resource' : 'Consumer' }}</th>
-                        <th scope="col">Constraints</th>
-                        <th scope="col">Pod</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <template v-for="[podLabel, rules] in rulesByPod" :key="podLabel">
-                        <tr v-if="rulesByPod.length > 1" class="pod-header-row">
-                            <td colspan="3">{{ podLabel }}</td>
+            <h3>{{ rules.length }} rule{{ rules.length === 1 ? '' : 's' }}</h3>
+            <div v-if="policyGroups.length === 0" class="empty-cell">No matches</div>
+            <div v-for="group in policyGroups" :key="group.policyId" class="policy-group">
+                <button type="button" class="policy-header" @click="openPolicy(group.policyId)">
+                    <span class="policy-id">{{ group.policyId }}</span>
+                </button>
+                <table class="rule-table">
+                    <caption class="sr-only">Rules in policy {{ group.policyId }}</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Consumer</th>
+                            <th scope="col">Resource</th>
+                            <th scope="col">Actions</th>
+                            <th scope="col">Constraints</th>
+                            <th scope="col">Pod</th>
                         </tr>
-                        <tr v-for="rule in rules" :key="rule.ruleId" class="rule-row" tabindex="0"
-                            @click="openPolicy(rule.policyId)" @keydown.enter.prevent="openPolicy(rule.policyId)"
-                            @keydown.space.prevent="openPolicy(rule.policyId)">
+                    </thead>
+                    <tbody>
+                        <tr v-for="rule in group.rules" :key="rule.ruleId" class="rule-row" tabindex="0"
+                            @click="openRule(rule)" @keydown.enter.prevent="openRule(rule)"
+                            @keydown.space.prevent="openRule(rule)">
+                            <td class="id-cell">{{ rule.subjectId }}</td>
+                            <td class="id-cell">{{ rule.resourceIdentifier }}</td>
                             <td>
-                                <div class="target">{{ targetLabel(rule) }}</div>
                                 <span class="type-chip" :class="rule.type">{{ rule.type }}</span>
                                 <div class="actions">
                                     <span class="action-chip" v-for="action in rule.action" :key="action"
@@ -42,13 +46,15 @@
                             </td>
                             <td class="pod-cell">{{ rule.podName ?? '—' }}</td>
                         </tr>
-                    </template>
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </section>
-        <Drawer v-model:visible="detailsVisible" header="Policy details" position="right"
-            class="policy-details-drawer">
-            <RuleForm v-if="selectedPolicyId" :policy-id="selectedPolicyId" />
+        <Drawer style="width: 80vw"  v-model:visible="ruleDetailsVisible" header="Rule details" position="right">
+            <RuleForm v-if="selectedRule" :rule="selectedRule" mode="view" :policy-id="selectedRule.policyId" @close="ruleDetailsVisible = false"/>
+        </Drawer>
+        <Drawer style="width: 90vw"  v-model:visible="policyDetailsVisible" header="Policy" position="right">
+            <PolicyDetail v-if="selectedPolicy" :policyId="selectedPolicy" @close="policyDetailsVisible = false"/>
         </Drawer>
     </div>
 </template>
@@ -58,45 +64,37 @@ import { ref, computed } from 'vue';
 import Drawer from 'primevue/drawer';
 import { PhXCircle } from '@phosphor-icons/vue';
 import RuleForm from './RuleForm.vue';
+import PolicyDetail from './PolicyDetail.vue'
 import { levelForAction } from '@/lib/accessLevel';
 import type { FlatRule, RawConstraint } from '@/lib/policyGrouping';
-import Ruleform from './Ruleform.vue';
 
 const props = defineProps<{
     label: string;
     rules: FlatRule[];
-    groupBy: 'subject' | 'resource';
+    groupBy: 'subject' | 'resource' | 'policy';
 }>();
 
-defineEmits<{ close: [] }>();
+const emit = defineEmits<{
+    close: [];
+}>();
 
-const detailsVisible = ref(false);
-const selectedPolicyId = ref<string | null>(null);
+const ruleDetailsVisible = ref(false);
+const policyDetailsVisible = ref(false);
+const selectedRule = ref<FlatRule | null>(null);
+const selectedPolicy = ref<string | null>(null);
 
-// when grouped by subject, the row should surface which resource the rule
-// touches, and vice versa when grouped by resource.
-const targetLabel = (rule: FlatRule) =>
-    props.groupBy === 'subject' ? rule.resourceIdentifier : rule.subjectId;
-
-const sortedRules = computed(() =>
-    [...props.rules].sort((a, b) => targetLabel(a).localeCompare(targetLabel(b))),
-);
-
-// Rules that share a pod sit together. Falls back to a single unlabeled
-// bucket (no header shown) when pod info isn't available on the rules.
-const rulesByPod = computed(() => {
+const policyGroups = computed(() => {
     const map = new Map<string, FlatRule[]>();
-    for (const rule of sortedRules.value) {
-        const key = rule.podName ?? 'Ungrouped';
-        const existing = map.get(key);
+    for (const rule of props.rules) {
+        const existing = map.get(rule.policyId);
         if (existing) existing.push(rule);
-        else map.set(key, [rule]);
+        else map.set(rule.policyId, [rule]);
     }
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+    return [...map.entries()]
+        .map(([policyId, rules]) => ({ policyId, rules }))
+        .sort((a, b) => a.policyId.localeCompare(b.policyId));
 });
 
-// ODRL terms are full URIs (http://www.w3.org/ns/odrl/2/read), only the
-// last segment is meaningful to a person reading this.
 const shorten = (uri: string) => uri.split(/[/#]/).filter(Boolean).pop() ?? uri;
 
 const actionStyle = (action: string) => {
@@ -112,8 +110,13 @@ const formatConstraint = (constraint: RawConstraint) => {
 };
 
 const openPolicy = (policyId: string) => {
-    selectedPolicyId.value = policyId;
-    detailsVisible.value = true;
+    selectedPolicy.value = policyId;
+    policyDetailsVisible.value = true;
+};
+
+const openRule = (rule: FlatRule) => {
+    selectedRule.value = rule;
+    ruleDetailsVisible.value = true;
 };
 </script>
 
@@ -175,6 +178,48 @@ header h2 {
     margin: 0 0 1rem;
 }
 
+.empty-cell {
+    padding: 1rem 0.75rem;
+    color: var(--off-black-50, rgba(23, 13, 51, 0.50));
+    font-style: italic;
+    text-align: center;
+}
+
+.policy-group {
+    margin-bottom: 1.5rem;
+}
+
+.policy-group:last-child {
+    margin-bottom: 0;
+}
+
+.policy-header {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background-color: var(--lama-gray);
+    border: none;
+    border-radius: var(--base-corner) var(--base-corner) 0 0;
+    padding: 0.35rem 0.6rem;
+    cursor: pointer;
+}
+
+.policy-header:hover {
+    background-color: color-mix(in srgb, var(--solid-purple) 15%, var(--lama-gray));
+}
+
+.policy-header:focus-visible {
+    outline: 2px solid var(--solid-purple);
+    outline-offset: -2px;
+}
+
+.policy-id {
+    font-size: calc(var(--base-unit) * 1.25);
+    font-family: monospace;
+    color: var(--off-black-50, rgba(23, 13, 51, 0.50));
+    overflow-wrap: anywhere;
+}
+
 .rule-table {
     width: 100%;
     border-collapse: collapse;
@@ -186,13 +231,6 @@ header h2 {
     color: var(--off-black-50, rgba(23, 13, 51, 0.50));
     padding: 0.4rem 0.6rem;
     border-bottom: 1px solid color-mix(in srgb, var(--off-black) 85%, transparent);
-}
-
-.pod-header-row td {
-    padding: 0.75rem 0.6rem 0.25rem;
-    font-weight: 700;
-    font-size: calc(var(--base-unit) * 1.5);
-    color: var(--off-black-50, rgba(23, 13, 51, 0.50));
 }
 
 .rule-row {
@@ -214,10 +252,9 @@ header h2 {
     border-bottom: 1px solid color-mix(in srgb, var(--off-black) 10%, transparent);
 }
 
-.target {
+.id-cell {
     font-size: calc(var(--base-unit) * 1.5);
     overflow-wrap: anywhere;
-    margin-bottom: 0.35rem;
 }
 
 .actions {
@@ -263,9 +300,5 @@ header h2 {
 .pod-cell {
     font-size: calc(var(--base-unit) * 1.5);
     white-space: nowrap;
-}
-
-:deep(.policy-details-drawer) {
-    width: 28rem;
 }
 </style>

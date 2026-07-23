@@ -2,26 +2,33 @@
     <div class="panel-container">
         <div class="left-panel">
             <div class="group-toggle">
-                <div class="toggle-group">
+                <div class="oneLine">
                     <LoButton :left-icon="PhUser" :class="{ active: groupBy === 'subject' }"
                         @click="selectGroupBy('subject')">By person</LoButton>
                     <LoButton :left-icon="PhFile" :class="{ active: groupBy === 'resource' }"
                         @click="selectGroupBy('resource')">By resource</LoButton>
-                        <LoButton :left-icon="PhArrowsClockwise" class="reload-button" :disabled="isRefreshing"
+                    <LoButton :left-icon="PhArchive" :class="{ active: groupBy === 'policy' }"
+                        @click="selectGroupBy('policy')">By policy</LoButton>
+                </div>
+                <div class="oneLine">
+                    <LoButton :left-icon="PhPlus" class="add-button" @click="addRuleVisible = true" aria-label="Add Rule">
+                        Add Rule
+                    </LoButton>
+                    <LoButton :left-icon="PhArrowsClockwise" class="reload-button" :disabled="isRefreshing"
                         @click="reload" aria-label="Reload resources">
                         {{ isRefreshing ? 'Reloading...' : 'Reload' }}
                     </LoButton>
-                    <LoButton :left-icon="PhPlus" class="add-button" @click="reload" aria-label="Add Rule">
-                        Add Rule
-                    </LoButton>
+
+                    <Drawer style="width: 80vw"  v-model:visible="addRuleVisible" header="Add Rule" position="right"
+                        class="policy-details-drawer">
+                        <RuleForm mode="create" @close="addRuleVisible = false"/>
+                    </Drawer>
                 </div>
             </div>
             <input v-model="filterQuery" type="search" class="filter-input"
-                :placeholder="`Filter ${groupBy === 'subject' ? 'people' : 'resources'} by name`"
+                :placeholder="`Filter ${ groupBy === 'subject' ? 'People' : groupBy === 'resource' ? 'Resources' : 'policies' } by name`"
                 aria-label="Filter by name" />
             <table class="group-table">
-                <caption class="sr-only">{{ groupBy === 'subject' ? 'People' : 'Resources' }} with policy rules
-                </caption>
                 <thead>
                     <tr>
                         <th scope="col">Name</th>
@@ -43,7 +50,7 @@
             <div class="default-panel-container" v-if="!selectedKey">
                 <div class="default-panel">
                     <img class="side-image" src="/vault.svg" />
-                    <p><strong>No {{ groupBy === 'subject' ? 'person' : 'resource' }} selected!</strong></p>
+                    <p><strong>No {{ groupBy === 'subject' ? 'People' : groupBy === 'resource' ? 'Resources' : 'policies' }} selected!</strong></p>
                     <i>Select a row to get started</i>
                 </div>
             </div>
@@ -55,27 +62,30 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { PhUser, PhFile, PhArrowsClockwise, PhPlus } from '@phosphor-icons/vue';
+import { PhUser, PhFile, PhArrowsClockwise, PhPlus, PhArchive } from '@phosphor-icons/vue';
 import LoButton from '../LoButton.vue';
 import GroupEntry from './GroupEntry.vue';
 import SelectedGroup from './SelectedGroup.vue';
+import RuleForm from './RuleForm.vue';
 import { usePodStore } from '@/lib/state';
 import { usePolicyGrouping, sortedGroupEntries, type FlatRule } from '@/lib/policyGrouping.js';
 import { highestLevel } from '@/lib/accessLevel';
 import { store } from 'loama-app'
 import { useControllerStore } from '@/stores/useControllerStore';
+import Drawer from 'primevue/drawer';
 
 const podStore = usePodStore();
 
-const groupBy = ref<'subject' | 'resource'>('subject');
+const addRuleVisible = ref(false);
+const groupBy = ref<'subject' | 'resource' | 'policy' >('subject');
 const selectedKey = ref<string | null>(null);
 const filterQuery = ref('');
 const isRefreshing = ref(false);
 let refreshInterval: ReturnType<typeof setInterval> | undefined;
 
-const { bySubject, byResource } = usePolicyGrouping(computed(() => podStore.policies));
+const { bySubject, byResource, byPolicy } = usePolicyGrouping(computed(() => podStore.policies));
 
-const activeGroups = computed(() => (groupBy.value === 'subject' ? bySubject.value : byResource.value));
+const activeGroups = computed(() => (groupBy.value === 'subject' ? bySubject.value : groupBy.value === 'resource' ? byResource.value : byPolicy.value));
 
 const filteredGroups = computed(() => sortedGroupEntries(activeGroups.value, filterQuery.value));
 
@@ -83,14 +93,12 @@ const groupHighestLevel = (rules: FlatRule[]) => highestLevel(rules.flatMap((rul
 
 const controllerStore = useControllerStore()
 
-const selectGroupBy = (value: 'subject' | 'resource') => {
+const selectGroupBy = (value: 'subject' | 'resource' | 'policy') => {
     groupBy.value = value;
     selectedKey.value = null;
     filterQuery.value = '';
 };
 
-// NOTE: guessing at the store's fetch method name here, swap this for
-// whatever podStore actually exposes to refetch policies.
 const reload = async () => {
     isRefreshing.value = true;
     try {
@@ -168,14 +176,14 @@ i {
     margin-bottom: 0.5rem;
 }
 
-.toggle-group {
+.oneLine {
     display: flex;
     gap: 0.5rem;
 }
 
 .group-toggle .active {
-    background-color: var(--solid-purple);
-    color: var(--off-white);
+    background-color: var(--off-white);
+    color: var(--solid-purple);
 }
 
 .reload-button:disabled {

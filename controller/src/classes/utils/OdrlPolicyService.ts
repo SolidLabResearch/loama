@@ -77,6 +77,26 @@ export class ODRLPolicyService {
         })
     }
 
+    public async putPolicy(webId: string, policyId: string, body: string) {
+        await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
+            method: 'PUT',
+            headers: {
+                'Authorization': `WebID ${encodeURIComponent(webId)}`,
+                'Content-type': 'text/turtle'
+            },
+            body: body
+        })
+    }
+
+    public async deletePolicy(webId: string, policyId: string) {
+        await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `WebID ${encodeURIComponent(webId)}`,
+            }
+        })
+    }
+
     public async patchPolicy(webId: string, policyId: string, body: string) {
         await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
             method: 'PATCH',
@@ -152,20 +172,6 @@ WHERE {}`)
     odrl:assigner <${webId}> .
 `)
         }
-    }
-
-    /**
-     * Applies a single rule-level change (add, edit, or remove) to a policy.
-     * This is the generalized replacement for the old addPermission/removePermission
-     * flow: instead of editing a flattened subject/permission pair, it edits the
-     * actual ODRL rule node identified by rule.id.
-     *
-     * NOTE: the delete-then-insert body for 'edit' sends two update operations in
-     * one PATCH request. This follows standard SPARQL 1.1 Update syntax but has not
-     * been verified against your authorization server, confirm it accepts this shape.
-     */
-    public async applyRuleUpdate(webId: string, update: RuleUpdate): Promise<void> {
-        console.log("applyRuleUpate");
     }
 
     /**

@@ -16,7 +16,7 @@ export interface FlatRule {
     podName?: string;
 }
 
-export type GroupKey = 'subjectId' | 'resourceIdentifier';
+export type GroupKey = 'subjectId' | 'resourceIdentifier' | 'policyId';
 export type GroupedRules = Map<string, FlatRule[]>;
 
 // The pod is just the first path segment of the resource's URL, e.g.
@@ -61,11 +61,6 @@ function groupBy(rules: FlatRule[], key: GroupKey): GroupedRules {
     return map;
 }
 
-/**
- * Returns a group map as an array of [key, rules] pairs sorted
- * alphabetically by key, optionally filtered by a case-insensitive
- * substring match on the key.
- */
 export function sortedGroupEntries(map: GroupedRules, filter = ''): [string, FlatRule[]][] {
     const query = filter.trim().toLowerCase();
     return [...map.entries()]
@@ -73,15 +68,11 @@ export function sortedGroupEntries(map: GroupedRules, filter = ''): [string, Fla
         .sort(([a], [b]) => a.localeCompare(b));
 }
 
-/**
- * Takes a reactive list of policies and derives both groupings off a
- * single flattened rule list, so adding a third grouping later (or a
- * file-based view) is just another groupBy call over the same source.
- */
 export function usePolicyGrouping(policies: ComputedRef<Policy[]>) {
     const flatRules = computed(() => flattenPolicies(policies.value));
     const bySubject = computed(() => groupBy(flatRules.value, 'subjectId'));
     const byResource = computed(() => groupBy(flatRules.value, 'resourceIdentifier'));
+    const byPolicy = computed(() => groupBy(flatRules.value, 'policyId'));
 
-    return { flatRules, bySubject, byResource };
+    return { flatRules, bySubject, byResource, byPolicy };
 }
