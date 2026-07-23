@@ -1,5 +1,5 @@
 import type { Entry } from "./types";
-import { type IController, type Policy, type PublicSubject, type WebIdSubject } from "loama-controller";
+import { type IController, type Policy, type PublicSubject, type RuleUpdate, type WebIdSubject } from "loama-controller";
 import { defineStore } from "pinia";
 import { store } from "loama-app";
 
@@ -28,6 +28,11 @@ export const usePodStore = defineStore("pod", {
             if (!this.selectedEntry) {
                 throw new Error('No selected entry to update permissions for');
             }
-        }
+        },
+        async updatePolicy(ruleUpdates: RuleUpdate[], controller: IController<{webId: WebIdSubject; public: PublicSubject;}>) {
+            await controller.updatePolicy(ruleUpdates);
+            
+            this.policies = await controller.getResourcePolicies("");
+        },
     }
 })

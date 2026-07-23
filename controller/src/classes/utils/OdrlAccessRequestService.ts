@@ -46,9 +46,9 @@ export class ODRLAccessRequestService {
         if (accessRequest.constraint && accessRequest.constraint.length > 0) {
             accessRequest.constraint.forEach(con => {
                 constraintsList.push([
-                    con.LeftOperand,
-                    con.Operand,
-                    con.RightOperand
+                    con.leftOperand,
+                    con.operator,
+                    con.rightOperand
                 ]);
             });
         }

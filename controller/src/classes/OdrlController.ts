@@ -88,14 +88,73 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
     }
 
     async updatePolicy(updates: RuleUpdate[]): Promise<void> {
-        console.log("updatePolicy");
-        const webId = getDefaultSession().info.webId!;
+
+        if (updates.length === 0) return;
+
+        const webId = getDefaultSession().info.webId;
+        if (!webId) throw new Error("User not logged in");
         const service = new ODRLPolicyService(this.authorizationServerURL);
-        // Applied sequentially so a later update in the batch can safely depend on
-        // an earlier one having landed (e.g. edit right after add of the same rule).
+
+        const store = await service.fetchPolicies(webId);
+        const interpreter = new PolicyInterpreter();
+        const allPolicies = interpreter.storeToPolicies(store);
+
+        const policiesMap = new Map<string, Policy>(allPolicies.map(p => [p.id, p]));
+        const modifiedPolicyIds = new Set<string>();
+        
         for (const update of updates) {
-            await service.applyRuleUpdate(webId, update);
+            if (!update.policyId){
+                if(update.updateType == 'add'){
+                    //create policy
+                    const policy: Policy = {
+                        id: `http://example.org/${(Math.random() * 100).toString()}`, //ToDo how do i do this
+                        rules: [update.rule],
+                        type: 'Agreement'
+                    };
+
+                    policy.rules[0].id = `http://example.org/${policy.id}-Rule-${(Math.random() * 100).toString()}`; //ToDo same idk how
+                    policiesMap.set(policy.id, policy);
+                    modifiedPolicyIds.add(policy.id);
+                }
+                continue;
+                
+            }
+            const policy = policiesMap.get(update.policyId);
+            if (!policy) continue;
+            const ruleIndex = policy.rules.findIndex(r => r.id === update.rule.id);
+
+            if(update.rule.id == ""){
+                update.rule.id = `http://example.org/${update.policyId}-Rule-${(Math.random() * 100).toString()}`; //ToDo Idk how
+            }
+
+
+            if (update.updateType === 'remove' && ruleIndex !== -1) {
+                policy.rules.splice(ruleIndex, 1);
+                modifiedPolicyIds.add(policy.id);
+            } else if (update.updateType === 'edit' && ruleIndex !== -1) {
+                policy.rules[ruleIndex] = update.rule;
+                modifiedPolicyIds.add(policy.id);
+            } else if (update.updateType === 'add') {
+                if (ruleIndex === -1) policy.rules.push(update.rule);
+                else policy.rules[ruleIndex] = update.rule;
+                modifiedPolicyIds.add(policy.id);
+            }
         }
+
+        const savePromises = Array.from(modifiedPolicyIds).map(async (policyId) => {
+            const policy = policiesMap.get(policyId)!;
+            if(policy.rules.length == 0){
+                await service.deletePolicy(webId, policyId);
+            }
+            else{
+                // Convert JS Policy object back to Turtle format
+                const turtleText = interpreter.policyToTurtle(webId, policy); 
+                await service.putPolicy(webId, policyId, turtleText);
+            }
+        });
+
+        await Promise.all(savePromises);
+        console.log("updated complete;");
     }
 
     async getResourcePolicies(resourceUrl: string): Promise<Policy[]> {

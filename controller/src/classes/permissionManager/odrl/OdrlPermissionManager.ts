@@ -109,14 +109,12 @@ export abstract class ODRLPermissionManager<T extends Record<keyof T, BaseSubjec
         // Retrieve our policies
         const store = await new ODRLPolicyService(this.authorizationServerURL).fetchPolicies(webId);
 
-        console.log(store);
 
         // Get detailed info about the target
         const interpreter = new PolicyInterpreter();
         const target: TargetSubjects = interpreter.permissionsForOneResource(resourceUrl, store);
         
 
-        console.log(target);
 
         if (target) {
             const subjectPermissions: SubjectPermissions<T[K]>[] = [];
@@ -183,8 +181,6 @@ export abstract class ODRLPermissionManager<T extends Record<keyof T, BaseSubjec
                 permissionsPerSubject: perms
             })
         }
-        console.log("resourcePermissions");
-        console.log(resourcePermissions);
         return resourcePermissions;
     }
 

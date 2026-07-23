@@ -42,27 +42,27 @@ const addAccessRequest = async () => {
 
   accessRequestParams.value.purposes.forEach(purpose => {
     constraints.push({
-      LeftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
-      Operand: 'http://www.w3.org/ns/odrl/2/eq',
-      RightOperand: purpose.startsWith('http') ? purpose : `https://w3id.org/dpv#${purpose.replace('dpv:', '')}`
+      leftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
+      operator: 'http://www.w3.org/ns/odrl/2/eq',
+      rightOperand: purpose.startsWith('http') ? [purpose] : [`https://w3id.org/dpv#${purpose.replace('dpv:', '')}`]
     });
   });
 
   if (accessRequestParams.value.startTime) {
     const startIso = new Date(accessRequestParams.value.startTime).toISOString();
     constraints.push({
-      LeftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
-      Operand: 'http://www.w3.org/ns/odrl/2/gt',
-      RightOperand: `"${startIso}""^^xsd:dateTime"`
+      leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
+      operator: 'http://www.w3.org/ns/odrl/2/gt',
+      rightOperand: [`"${startIso}""^^xsd:dateTime"`]
     });
   }
 
   if (accessRequestParams.value.endTime) {
     const endIso = new Date(accessRequestParams.value.endTime).toISOString();
     constraints.push({
-      LeftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
-      Operand: 'http://www.w3.org/ns/odrl/2/lt',
-      RightOperand: `"${endIso}""^^xsd:dateTime"`
+      leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
+      operator: 'http://www.w3.org/ns/odrl/2/lt',
+      rightOperand: [`"${endIso}""^^xsd:dateTime"`]
     });
   }
 

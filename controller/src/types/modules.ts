@@ -156,7 +156,7 @@ export interface IPolicy {
     id: string;
 }
 
-export type RuleType = 'permission' | 'prohibition' | 'duty';
+export type RuleType = 'Permission' | 'Prohibition' | 'Duty';
 
 // Temporal (?) interface to represent a rule within a policy
 export interface IRule {
