@@ -1,8 +1,5 @@
-import type { Entry } from "./types";
 import { type IController, type Policy, type PublicSubject, type RuleUpdate, type WebIdSubject } from "loama-controller";
 import { defineStore } from "pinia";
-import { store } from "loama-app";
-
 
 type PodStore = {
     policies: Policy[];
