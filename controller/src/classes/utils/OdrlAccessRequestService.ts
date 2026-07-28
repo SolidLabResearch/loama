@@ -1,6 +1,6 @@
 import { AccessRequest } from "@/types/modules";
 import { QueryEngine } from "@comunica/query-sparql";
-import { Parser, Store, Writer } from "n3";
+import { Parser, Store } from "n3";
 import { v4 as uuid } from 'uuid';
 
 export class ODRLAccessRequestService {
@@ -14,10 +14,9 @@ export class ODRLAccessRequestService {
 
     /**
      * Place a POST request to create an access request to an UMA backend
-     * @param AccessRequest - contains all infromation regarding an access request
+     * @param accessRequest - all infromation regarding an access request
      */
     public requestAccess = async (accessRequest: AccessRequest): Promise<void> => {
-        console.log("requesting-access");
         const response = await fetch(
             `${this.authorizationServerURL}/requests`, {
                 method: 'POST',
@@ -30,9 +29,12 @@ export class ODRLAccessRequestService {
         if (response.status !== 201) throw new Error('failed to create access request');
     }
 
+    /**
+     * Transform accessrequest to required JSON format
+     * @param accessRequest - all information regarding an access request
+     * @returns 
+     */
     private accessRequestToJson = async (accessRequest: AccessRequest): Promise<string> => {
-        console.log("AR")
-        console.log(accessRequest);
         const payload: any = {
             resource_id: accessRequest.target,
             resource_scopes: 
@@ -125,6 +127,11 @@ export class ODRLAccessRequestService {
         };
     }
 
+    /**
+     * Transform raw bindings to AccessRequest objects 
+     * @param bindings 
+     * @returns 
+     */
     private bindingsToAccessRequest = async (bindings: any): Promise<AccessRequest[]> => {
         const requestsMap = new Map<string, AccessRequest>();
 
@@ -192,6 +199,12 @@ export class ODRLAccessRequestService {
         return (match ? match[1] : val).toLowerCase();
     }
 
+    /**
+     * Fetches all access requests submitted by a given WebId
+     * Returns a SPARQL query string
+     * @param requestingPartyID 
+     * @returns 
+     */
     private readonly accessRequestForRequestingParty = (requestingPartyID: string): string => `
         PREFIX ex: <http://example.org/>
         PREFIX sotw: <https://w3id.org/force/sotw#>
@@ -218,6 +231,12 @@ export class ODRLAccessRequestService {
         GROUP BY ?uid ?target ?requestingParty ?status ?constraintUri ?leftOperand ?operator ?rightOperand
     `;
 
+    /**
+     * Fetches all access requests controlled by a given WebId
+     * Returns a SPARQL query string
+     * @param resourceOwnerID 
+     * @returns 
+     */
     private readonly accessRequestForResourceOwner = (resourceOwnerID: string): string => `
         PREFIX ex: <http://example.org/>
         PREFIX sotw: <https://w3id.org/force/sotw#>

@@ -15,17 +15,6 @@ export const usePodStore = defineStore("pod", {
         async loadResources(url: string, controller: IController<{webId: WebIdSubject; public: PublicSubject;}>) {
             this.policies = await controller.getResourcePolicies(url);
         },
-        async refreshEntryPermissions(controller: IController<{ webId: WebIdSubject; public: PublicSubject }>) {
-            if (!this.selectedEntry) {
-                throw new Error('No selected entry to update permissions for');
-            }
-            const newResourceInfo = await controller.getResourcePermissionList(this.selectedEntry.id);
-        },
-        async refreshRequestAccessAllowance(controller: IController<{ webId: WebIdSubject; public: PublicSubject }>) {
-            if (!this.selectedEntry) {
-                throw new Error('No selected entry to update permissions for');
-            }
-        },
         async updatePolicy(ruleUpdates: RuleUpdate[], controller: IController<{webId: WebIdSubject; public: PublicSubject;}>) {
             await controller.updatePolicy(ruleUpdates);
             

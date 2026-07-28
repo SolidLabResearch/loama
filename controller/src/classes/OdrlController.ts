@@ -1,13 +1,12 @@
 import { getDefaultSession } from "@inrupt/solid-client-authn-browser";
-import { BaseSubject, Index, IndexItem, Permission, ResourcePermissions, Resources } from "../types";
-import { IAccessRequest, IController, IInboxConstructor, IStore, IStoreConstructor, SubjectConfig, SubjectConfigs, SubjectKey, SubjectType } from "../types/modules";
+import { BaseSubject, Index, Permission, Resources } from "../types";
+import { IController, IInboxConstructor, IStore, IStoreConstructor, SubjectConfig, SubjectConfigs, SubjectKey, SubjectType } from "../types/modules";
 import { type AccessRequest as AccessRequestObject, Policy, Rule, RuleUpdate } from "../types/modules";
-import { AccessRequest } from "./accessRequests/AccessRequest";
-import { ODRLAccessRequest } from "./accessRequests/OdrlAccessRequest";
 import { Mutex } from "./utils/Mutex";
 import { ODRLAccessRequestService } from "./utils/OdrlAccessRequestService";
 import { ODRLPolicyService } from "./utils/OdrlPolicyService";
 import { PolicyInterpreter } from "./utils/PolicyInterpreter";
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Controller which makes it calls to the backend AS through ODRL requests.
@@ -16,7 +15,6 @@ import { PolicyInterpreter } from "./utils/PolicyInterpreter";
 export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & string>>> extends Mutex implements IController<T> {
     private index: IStore<Index<T[keyof T & string]>>;
     private resources: IStore<Resources>;
-    private accessRequest: AccessRequest;
     private subjectConfigs: SubjectConfigs<T>;
     private authorizationServerURL: string;
 
@@ -26,7 +24,6 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
         // There is currently no "easy" solution to get around the as IStore...
         this.index = new storeConstructor("index.json", () => ({ id: "", items: [] })) as IStore<Index<T[keyof T & string]>>;
         this.resources = new storeConstructor("resources.json", () => ({ id: "", items: [] })) as IStore<Resources>;;
-        this.accessRequest = new ODRLAccessRequest(this as unknown as ODRLController<{}>, inboxConstructor, this.resources);
         this.subjectConfigs = subjects;
         this.authorizationServerURL = authorizationServerURL;
     }
@@ -40,10 +37,6 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
     }
 
     private async updateItem<K extends SubjectKey<T>>(resourceUrl: string, subject: SubjectType<T, K>, permissions: Permission[], alwaysKeepItem = false) {
-    }
-
-    AccessRequest(): IAccessRequest {
-        return this.accessRequest;
     }
 
     async setPodUrl(podUrl: string) {
@@ -62,31 +55,10 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
     }
 
     /**
-     * Assemble the information for a subject in a resource
+     * Updates existing policies according to present rule changes
+     * @param updates All requested changes
      * @returns 
      */
-    async getItem<K extends SubjectKey<T>>(resourceUrl: string, subject: SubjectType<T, K>): Promise<IndexItem<T[K]> | undefined> {
-        const subjectConfig = this.getSubjectConfig(subject)
-        const subjects = await subjectConfig.manager.getRemotePermissions<K>(resourceUrl);
-        const subjectPermission = subjects.find(entry => subjectConfig.resolver.checkMatch(entry.subject, subject))
-        if (!subjectPermission) return undefined
-        return {
-            id: "string",
-            requestId: "string",
-            isEnabled: subjectPermission.isEnabled,
-            permissions: [...subjectPermission.permissions ?? []],
-            resource: resourceUrl,
-            subject: subject,
-        } as IndexItem<T[K]>
-    }
-
-    async removeSubject<K extends SubjectKey<T>>(resourceUrl: string, subject: SubjectType<T, K>) {
-        const subjectConfig = this.getSubjectConfig(subject);
-        const item = await this.getItem(resourceUrl, subject);
-
-        await subjectConfig.manager.deletePermissions(resourceUrl, subject, item?.permissions ?? []);
-    }
-
     async updatePolicy(updates: RuleUpdate[]): Promise<void> {
 
         if (updates.length === 0) return;
@@ -107,12 +79,12 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
                 if(update.updateType == 'add'){
                     //create policy
                     const policy: Policy = {
-                        id: `http://example.org/${(Math.random() * 100).toString()}`, //ToDo how do i do this
+                        id: `http://example.org/${uuidv4()}`,
                         rules: [update.rule],
                         type: 'Agreement'
                     };
 
-                    policy.rules[0].id = `http://example.org/${policy.id}-Rule-${(Math.random() * 100).toString()}`; //ToDo same idk how
+                    policy.rules[0].id = `http://example.org/${policy.id}-Rule-${(uuidv4()).toString()}`;
                     policiesMap.set(policy.id, policy);
                     modifiedPolicyIds.add(policy.id);
                 }
@@ -124,7 +96,7 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
             const ruleIndex = policy.rules.findIndex(r => r.id === update.rule.id);
 
             if(update.rule.id == ""){
-                update.rule.id = `http://example.org/${update.policyId}-Rule-${(Math.random() * 100).toString()}`; //ToDo Idk how
+                update.rule.id = `http://example.org/${update.policyId}-Rule-${uuidv4()}`;
             }
 
 
@@ -154,9 +126,13 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
         });
 
         await Promise.all(savePromises);
-        console.log("updated complete;");
     }
 
+    /**
+     * Get all policies the logged in user has control over
+     * @param resourceUrl Not Implemented - Can be used to filter down in multi-pod scenarios
+     * @returns Policy object
+     */
     async getResourcePolicies(resourceUrl: string): Promise<Policy[]> {
         const webId = getDefaultSession().info.webId;
         if (!webId) {
@@ -173,21 +149,6 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
 
     async disablePermissions<K extends SubjectKey<T>>(resourceUrl: string, subject: SubjectType<T, K>) {
         // won't fix
-    }
-
-    async getContainerPermissionList(containerUrl: string): Promise<ResourcePermissions<T[keyof T]>[]> {
-        return this.getSubjectConfig({ type: "public" } as T[SubjectKey<T>]).manager.getContainerPermissionList(containerUrl);
-    }
-
-    // NOTE: Do we want to force this to only use the index stored in the store?
-    async getResourcePermissionList(resourceUrl: string): Promise<ResourcePermissions<T[keyof T]>> {
-        const result = await this.getSubjectConfig({ type: "public" } as T[SubjectKey<T>]).manager.getRemotePermissions(resourceUrl);
-
-        return {
-            resourceUrl,
-            canRequestAccess: true, // TODO
-            permissionsPerSubject: result
-        };
     }
 
     isSubjectSupported<K extends string, B extends BaseSubject<K>>(subject: BaseSubject<K>): IController<Record<K, B>> {

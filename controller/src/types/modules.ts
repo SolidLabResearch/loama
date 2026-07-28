@@ -12,10 +12,8 @@ export type SubjectConfigs<T extends Record<keyof T, BaseSubject<keyof T & strin
 export interface IController<T extends Record<keyof T, BaseSubject<keyof T & string>>> {
     setPodUrl(podUrl: string): Promise<void>;
     unsetPodUrl(podUrl: string): void;
-    AccessRequest(): IAccessRequest;
     getLabelForSubject<K extends SubjectKey<T>>(subject: T[K]): string;
     getOrCreateIndex(): Promise<Index>;
-    getItem<K extends SubjectKey<T>>(resourceUrl: string, subject: SubjectType<T, K>): Promise<IndexItem<T[K]> | undefined>;
     
     updatePolicy(updates: RuleUpdate[]): Promise<void>;
     getResourcePolicies(resourceUrl: string): Promise<Policy[]>;
@@ -26,14 +24,6 @@ export interface IController<T extends Record<keyof T, BaseSubject<keyof T & str
     */
     enablePermissions<K extends SubjectKey<T>>(resource: string, subject: SubjectType<T, K>): Promise<void>
     disablePermissions<K extends SubjectKey<T>>(resource: string, subject: SubjectType<T, K>): Promise<void>
-    removeSubject<K extends SubjectKey<T>>(resource: string, subject: SubjectType<T, K>): Promise<void>
-    /**
-    * Retrieve the permissions of the resources in this container.
-    * Will probably work for a resource, but not guaranteed. Use getItem for that
-    */
-    getContainerPermissionList(containerUrl: string): Promise<ResourcePermissions<T[keyof T]>[]>
-
-    getResourcePermissionList(resourceUrl: string): Promise<ResourcePermissions<T[keyof T]>>
 
     isSubjectSupported<T extends string>(subject: BaseSubject<T>): IController<Record<T, BaseSubject<T>>>
 
@@ -41,38 +31,6 @@ export interface IController<T extends Record<keyof T, BaseSubject<keyof T & str
     requestAccess(permission: { accessRequest: AccessRequest}): Promise<void>;
     handleAccessRequest(requestId: string, status: string): Promise<void>;
     getAccessRequests(): Promise<{ asRequestingParty: AccessRequest[]; asResourceOwner: AccessRequest[]; }>;
-}
-
-export interface IAccessRequest {
-    /**
-    * Will return a tree structure starting from the containerUrl with the access requestable (container) resources
-    */
-    getRequestableResources(containerUrl: string): Promise<ResourceAccessRequestNode>
-
-    /**
-    * Checks if access to the resource is possible
-    * This should be based on the content of the resources.json file
-    */
-    canRequestAccessToResource(resourceUrl: string): Promise<boolean>
-    /**
-    * Adds a resource to the shareable resource list (resources.json)
-    */
-    allowAccessRequest(resourceUrl: string): Promise<void>
-    /**
-    * Removes a resource from the shareable resource list (resources.json)
-    */
-    disallowAccessRequest(resourceUrl: string): Promise<void>
-
-    // Notifications
-    sendRequestNotification(originWebId: string, resources: string[], permissions: Permission[]): Promise<void>;
-    sendResponseNotification(type: "accept" | "reject", message: AccessRequestMessage): Promise<void>;
-
-    loadAccessRequests(): Promise<AccessRequestMessage[]>;
-    loadRequestResponses(): Promise<RequestResponseMessage[]>;
-    /**
-    * Remove the given message resource from the inbox
-    */
-    removeRequest(messageUrl: string): Promise<void>;
 }
 
 export interface IInboxConstructor<T = unknown> {
@@ -134,19 +92,7 @@ export interface IPermissionManager<T = Record<string, BaseSubject<string>>> {
     // Does not update the index file
     editPermissions<K extends SubjectKey<T>>(resource: string, item: IndexItem, subject: T[K], permissions: Permission[]): Promise<void>
     deletePermissions<K extends SubjectKey<T>>(resource: string, subject: T[K], permissions: Permission[]): Promise<void>
-    getRemotePermissions<K extends SubjectKey<T>>(resourceUrl: string): Promise<SubjectPermissions<T[K]>[]>
-    /**
-    * Retrieve the permissions of the resources in this container.
-    * It will add the skipped resources to the returning object but without the permissions assignments.
-    * As this is necessary to clean-up the index
-    * Will probably work for a resource, but not guaranteed. Use getRemotePermissions for that
-    */
-    getContainerPermissionList(containerUrl: string, resourceToSkip?: string[]): Promise<ResourcePermissions<T[keyof T]>[]>
-    /**
-    * This indicates if the underlying SDK automatically removes the entry from the SDK if all permissions are revoked
-    */
     shouldDeleteOnAllRevoked(): boolean
-    //getTargetPermissionsForUser(assignerId: string, assigneeId: string, targetId: string): Promise<Permission[]>;
     type: string;
 }
 
@@ -156,7 +102,7 @@ export interface IPolicy {
     id: string;
 }
 
-export type RuleType = 'Permission' | 'Prohibition' | 'Duty';
+export type RuleType = 'Permission' | 'Prohibition';
 
 // Temporal (?) interface to represent a rule within a policy
 export interface IRule {
@@ -254,7 +200,6 @@ export interface Policy {
     id: string;
     rules: Rule[];
     type: PolicyType;
-    //optional state: enum // active, requested, denied
 }
 
 export type PolicyType = 'Agreement' | 'EvaluationRequest';
