@@ -19,7 +19,7 @@ const onCreate = async () => {
         console.error("No entry selected to add subject to!")
         return true;
     }
-    const entry = await controllerStore.currentController.getItem(podStore.selectedEntry.resourceUrl, {
+    const entry = await controllerStore.currentController.getItem(podStore.selectedEntry.id, {
         type: "public",
     });
     if (entry) {
@@ -28,9 +28,9 @@ const onCreate = async () => {
         return true;
     }
     try {
-        await controllerStore.currentController.addPermission(podStore.selectedEntry.resourceUrl, Permission.Read, {
+        /*await controllerStore.currentController.addPermission(podStore.selectedEntry.resourceUrl, Permission.Read, {
             type: "public"
-        })
+        })*/
         await podStore.refreshEntryPermissions(controllerStore.currentController);
         return true;
     } catch (e) {

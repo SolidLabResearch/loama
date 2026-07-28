@@ -19,7 +19,7 @@
                         {{ isRefreshing ? 'Reloading...' : 'Reload' }}
                     </LoButton>
 
-                    <Drawer style="width: 80vw"  v-model:visible="addRuleVisible" header="Add Rule" position="right"
+                    <Drawer style="width: 80vw"  v-model:visible="addRuleVisible" position="right"
                         class="policy-details-drawer">
                         <RuleForm mode="create" @close="addRuleVisible = false"/>
                     </Drawer>
@@ -64,12 +64,12 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { PhUser, PhFile, PhArrowsClockwise, PhPlus, PhArchive } from '@phosphor-icons/vue';
 import LoButton from '../LoButton.vue';
-import GroupEntry from './GroupEntry.vue';
-import SelectedGroup from './SelectedGroup.vue';
+import GroupEntry from './Groupentry.vue';
+import SelectedGroup from './Selectedgroup.vue';
 import RuleForm from './RuleForm.vue';
 import { usePodStore } from '@/lib/state';
 import { usePolicyGrouping, sortedGroupEntries, type FlatRule } from '@/lib/policyGrouping.js';
-import { highestLevel } from '@/lib/accessLevel';
+import { highestLevel } from '@/lib/Accesslevel.js';
 import { store } from 'loama-app'
 import { useControllerStore } from '@/stores/useControllerStore';
 import Drawer from 'primevue/drawer';
@@ -231,6 +231,11 @@ i {
 
 .right-panel {
     flex: 2;
+}
+
+.add-button {
+    background-color: green;
+    border-color: green;
 }
 
 .default-panel-container {

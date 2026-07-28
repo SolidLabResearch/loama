@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import type { AccessLevel } from '@/lib/accessLevel';
+import type { AccessLevel } from '@/lib/Accesslevel';
 
 defineProps<{
     label: string;
