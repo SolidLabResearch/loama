@@ -41,23 +41,5 @@ export class GroupManager<T extends Record<keyof T, BaseSubject<keyof T & string
         await this.updateACL(resource, subject, accessModes)
     }
 
-    async getRemotePermissions<K extends SubjectKey<T>>(resourceUrl: string) {
-        const groupAccess = await this.getGroupAccessAll(resourceUrl)
-
-        if (!groupAccess) {
-            return [];
-        }
-
-        return Object.entries(groupAccess).map(([url, access]) => ({
-            // @ts-expect-error selector is required for webId
-            subject: {
-                type: "webId",
-                selector: { url },
-            } as T[K],
-            permissions: this.AccessModesToPermissions(access),
-            isEnabled: true,
-        }))
-    }
-
     type = 'groupManager'
 }

@@ -1,8 +1,6 @@
-import { Permission } from "../../types/";
-import { Constraint, IPolicy, ISpecificTargetInfo, Policy, PolicyType, RuleType, Rule, TargetSubjects } from "../../types/modules";
-import { DataFactory, Parser, Store, Writer } from "n3";
+import { Constraint, ISpecificTargetInfo, Policy, Rule } from "../../types/modules";
+import { DataFactory, Store, Writer } from "n3";
 import { ODRL } from "./PolicyParser";
-//import { Rule } from "@inrupt/solid-client/acp/rule";
 
 const { namedNode, literal } = DataFactory;
 
@@ -34,7 +32,7 @@ export class PolicyInterpreter {
     }
 
     /**
-     *
+     * transforms N3 data-store object to Policy object 
      * @param store the fetched policies
      * @param resourceUrl if given, only rules targeting this resource are included
      */
@@ -101,6 +99,12 @@ export class PolicyInterpreter {
         return policies;
     }
 
+    /**
+     * Transform policy object to a turtle-string
+     * @param webId 
+     * @param policy 
+     * @returns 
+     */
     public policyToTurtle(webId: string, policy: Policy): string {
         const ODRL = 'http://www.w3.org/ns/odrl/2/';
         const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';

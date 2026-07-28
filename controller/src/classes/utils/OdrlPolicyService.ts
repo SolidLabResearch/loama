@@ -1,15 +1,8 @@
 import { getDefaultSession } from "@inrupt/solid-client-authn-browser";
 import { Permission } from "../../types";
-import { RuleUpdate } from "../../types/modules";
 import { ODRL, PolicyParser } from "./PolicyParser";
 import { DataFactory } from "n3";
 const { namedNode } = DataFactory;
-
-const RULE_TYPE_TERM: Record<string, string> = {
-    permission: 'Permission',
-    prohibition: 'Prohibition',
-    duty: 'Duty'
-};
 
 export const UMA_URL = (authorizationServerURL: string, encodedId: string = "") => 
     `${authorizationServerURL}/policies${encodedId}`;
