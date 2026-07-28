@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, type Ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, type Ref } from 'vue';
 import type { AccessRequest, Constraint } from 'loama-controller';
 import AccessRequestEntry from './AccessRequestEntry.vue';
 import { useControllerStore } from '@/stores/useControllerStore';
+import { PURPOSES } from '@/lib/Purposes';
+import { useTomSelectMultiple } from '@/lib/Usetomselect'
+import 'tom-select/dist/css/tom-select.css';
 
 const controllerStore = useControllerStore();
 
@@ -14,6 +17,26 @@ const accessRequestParams = ref({
   purposes: [] as string[],
   startTime: '',
   endTime: '',
+});
+
+const purposeSelectEl = ref<HTMLSelectElement | null>(null);
+const purposesEditable = ref(true);
+const purposesModel = computed<string[]>({
+  get: () => accessRequestParams.value.purposes,
+  set: (value) => { accessRequestParams.value.purposes = value; },
+});
+
+useTomSelectMultiple(purposeSelectEl, purposesModel, purposesEditable, {
+  options: PURPOSES.options,
+  optgroups: PURPOSES.groups,
+  optgroupField: 'group',
+  labelField: 'name',
+  valueField: 'value',
+  searchField: ['name', 'desc', 'value'],
+  render: {
+    optgroup_header: (data: { label: string }) => `<div class="optgroup-header">${data.label}</div>`,
+    option: (data: { name: string; desc: string }) => `<div><strong>${data.name}</strong><div>${data.desc}</div></div>`,
+  },
 });
 
 const mode = ref<'list' | 'create'>('list');
@@ -66,11 +89,13 @@ const addAccessRequest = async () => {
     });
   }
 
+  console.log("aaa");
+  
   await controllerStore.current.requestAccess({
     accessRequest: {
       uid: `http://example.org/request/${crypto.randomUUID()}`,
       target: accessRequestParams.value.target,
-      action: accessRequestParams.value.action,
+      actions: [accessRequestParams.value.action],
       constraint: constraints,
       requestingParty: '', //ToDo
       status: 'Requested'
@@ -124,12 +149,7 @@ onBeforeUnmount(() => clearInterval(interval));
         </select>
 
         <label for="purpose">Purpose</label>
-        <select name="purpose" id="purpose" multiple v-model="accessRequestParams.purposes">
-            <option value="dpv:AccountManagement">dpv:AccountManagement</option>
-            <option value="dpv:CommercialPurpose">dpv:CommercialPurpose</option>
-            <option value="dpv:CommunicationManagement">dpv:CommunicationManagement</option>
-            <option value="dpv:CustomerManagement">dpv:CustomerManagement</option>
-        </select>
+        <select name="purpose" id="purpose" ref="purposeSelectEl" multiple></select>
 
         <label for="StartTime">Start Time</label>
         <input type="datetime-local" id="StartTime" v-model="accessRequestParams.startTime">
@@ -210,7 +230,6 @@ onBeforeUnmount(() => clearInterval(interval));
   gap: 2rem;
   padding: 2rem;
   background-color: var(--off-white);
-  min-height: calc(100vh - var(--base-unit) * 14);
 }
 
 /* Shared card style */
@@ -280,6 +299,52 @@ input.error,
 select.error {
   border-color: var(--lama-red);
   background-color: #ffe6e9;
+}
+
+:deep(.ts-wrapper) {
+  font-size: calc(var(--base-unit) * 2);
+}
+
+:deep(.ts-control) {
+  padding: 0.5rem 0.75rem;
+  border: 0.125rem solid var(--lama-gray);
+  border-radius: var(--base-corner);
+  background-color: var(--off-white);
+  transition: border-color 0.2s ease;
+}
+
+:deep(.ts-wrapper.focus .ts-control) {
+  border-color: var(--solid-purple);
+}
+
+:deep(.ts-dropdown) {
+  border: 0.125rem solid var(--lama-gray);
+  border-radius: var(--base-corner);
+  background-color: var(--off-white);
+}
+
+:deep(.ts-dropdown .optgroup-header) {
+  font-weight: 700;
+  color: var(--off-black);
+  padding: 0.4rem 0.75rem 0.1rem;
+  font-size: calc(var(--base-unit) * 1.5);
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+:deep(.ts-dropdown .option strong) {
+  color: var(--off-black);
+}
+
+:deep(.ts-dropdown .option div div) {
+  font-size: calc(var(--base-unit) * 1.5);
+  opacity: 0.7;
+}
+
+:deep(.ts-wrapper .item) {
+  background-color: color-mix(in srgb, var(--solid-purple) 15%, white);
+  color: var(--solid-purple);
+  border-radius: 999px;
 }
 
 /* Each request entry */

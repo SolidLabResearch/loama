@@ -50,10 +50,10 @@
                 </table>
             </div>
         </section>
-        <Drawer style="width: 80vw"  v-model:visible="ruleDetailsVisible" header="Rule details" position="right">
-            <RuleForm v-if="selectedRule" :rule="selectedRule" mode="view" :policy-id="selectedRule.policyId" @close="ruleDetailsVisible = false"/>
+        <Drawer style="width: 80vw"  v-model:visible="ruleDetailsVisible" position="right">
+            <RuleForm v-if="selectedRule" :rule="selectedRule" mode="view" :policy-id="selectedPolicy" @close="ruleDetailsVisible = false"/>
         </Drawer>
-        <Drawer style="width: 90vw"  v-model:visible="policyDetailsVisible" header="Policy" position="right">
+        <Drawer style="width: 90vw"  v-model:visible="policyDetailsVisible" position="right">
             <PolicyDetail v-if="selectedPolicy" :policyId="selectedPolicy" @close="policyDetailsVisible = false"/>
         </Drawer>
     </div>
@@ -65,8 +65,10 @@ import Drawer from 'primevue/drawer';
 import { PhXCircle } from '@phosphor-icons/vue';
 import RuleForm from './RuleForm.vue';
 import PolicyDetail from './PolicyDetail.vue'
-import { levelForAction } from '@/lib/accessLevel';
+import { levelForAction } from '@/lib/Accesslevel';
 import type { FlatRule, RawConstraint } from '@/lib/policyGrouping';
+import { usePodStore } from '@/lib/state';
+import type { Rule } from 'loama-controller';
 
 const props = defineProps<{
     label: string;
@@ -80,8 +82,9 @@ const emit = defineEmits<{
 
 const ruleDetailsVisible = ref(false);
 const policyDetailsVisible = ref(false);
-const selectedRule = ref<FlatRule | null>(null);
+const selectedRule = ref<Rule | null>(null);
 const selectedPolicy = ref<string | null>(null);
+const podStore = usePodStore();
 
 const policyGroups = computed(() => {
     const map = new Map<string, FlatRule[]>();
@@ -115,7 +118,18 @@ const openPolicy = (policyId: string) => {
 };
 
 const openRule = (rule: FlatRule) => {
-    selectedRule.value = rule;
+    
+    podStore.policies.forEach(p =>{
+    if(p.id == rule.policyId){
+        p.rules.forEach(r =>{
+            if(r.id == rule.ruleId){
+                selectedRule.value = r;
+                selectedPolicy.value = rule.policyId;
+            }
+        });
+    }
+    });
+
     ruleDetailsVisible.value = true;
 };
 </script>

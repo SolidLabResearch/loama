@@ -200,6 +200,7 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
 
     // ! added for access requests
     async requestAccess(permission: { accessRequest: AccessRequestObject}): Promise<void> {
+        console.log('aaa-Requesting');
         const webid = getDefaultSession().info.webId!;
         permission.accessRequest.requestingParty = webid;
     await new ODRLAccessRequestService(this.authorizationServerURL).requestAccess(permission.accessRequest);

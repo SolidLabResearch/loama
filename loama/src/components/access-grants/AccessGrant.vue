@@ -96,7 +96,6 @@ onBeforeUnmount(() => clearInterval(interval));
   gap: 2rem;
   padding: 2rem;
   background-color: var(--off-white);
-  min-height: calc(100vh - var(--base-unit) * 14);
 }
 
 /* Shared card style */

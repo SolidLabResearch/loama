@@ -102,6 +102,6 @@
         "skipLibCheck": true /* Skip type checking all .d.ts files. */
     },
     "include": [
-        "src/**/*",
+        "src/**/*", "../loama/src/lib/Usetomselect.ts", "../loama/src/lib/Purposes.ts",
     ]
 }

@@ -146,7 +146,7 @@ export interface IPermissionManager<T = Record<string, BaseSubject<string>>> {
     * This indicates if the underlying SDK automatically removes the entry from the SDK if all permissions are revoked
     */
     shouldDeleteOnAllRevoked(): boolean
-    getTargetPermissionsForUser(assignerId: string, assigneeId: string, targetId: string): Promise<Permission[]>;
+    //getTargetPermissionsForUser(assignerId: string, assigneeId: string, targetId: string): Promise<Permission[]>;
     type: string;
 }
 
@@ -190,7 +190,7 @@ export interface Constraint {
 export interface AccessRequest {
     uid: string;
     target: string;
-    action: string;
+    actions: string[];
     constraint: Constraint[];
     requestingParty: string;
     status: string;

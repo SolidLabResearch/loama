@@ -34,33 +34,6 @@ export class PolicyInterpreter {
     }
 
     /**
-     * Function that returns the stored Target objects without sanitization
-     * This function assumes all policies are correct, and only contains information for the logged on client
-     * 
-     * Currently, it does not check the rule type (permission, prohibition, duty) and it only takes permission into account
-     * @param store the owned policies in a store
-     * @returns the target -> subjects -> permissions relation for all owned targets
-     */
-    public ownedPoliciesToObject = (store: Store, specifiedTarget: string = ""): TargetSubjects[] => {
-    }
-
-    // Return the subject -> permissions relation for a target
-    public permissionsForOneResource(resourceUrl: string, store: Store): TargetSubjects {
-    }
-
-    private readonly ruleRelations: RuleType[] = ['permission', 'prohibition', 'duty'];
-
-    private extractConstraints(ruleStore: Store, ruleId: string): Constraint[] {
-    }
-
-    /**
-     * Unflattened version of permissionsForOneResource. Instead of collapsing every rule
-     * into a single subject -> permissions map, this keeps the real policy/rule structure
-     * so the UI (and updatePolicy) can operate on actual ODRL rules.
-     *
-     * A single ODRL rule can list multiple assignees. Since Rule only carries one
-     * subjectId, a rule with N assignees is expanded into N Rule entries that share
-     * the same id. A rule with no assignee becomes one Rule with subjectId "" (public).
      *
      * @param store the fetched policies
      * @param resourceUrl if given, only rules targeting this resource are included

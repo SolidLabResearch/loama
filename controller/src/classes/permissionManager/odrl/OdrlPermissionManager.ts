@@ -84,7 +84,7 @@ export abstract class ODRLPermissionManager<T extends Record<keyof T, BaseSubjec
      * 
      * TODO: split in subject
      */
-    public async getTargetPermissionsForUser(assignerId: string, assigneeId: string, targetId: string): Promise<Permission[]> {
+    /*public async getTargetPermissionsForUser(assignerId: string, assigneeId: string, targetId: string): Promise<Permission[]> {
         const store: Store = await new ODRLPolicyService(this.authorizationServerURL).fetchPolicies(assignerId);
         const target: TargetSubjects = new PolicyInterpreter().permissionsForOneResource(targetId, store);
 
@@ -92,7 +92,7 @@ export abstract class ODRLPermissionManager<T extends Record<keyof T, BaseSubjec
         if (!target.private || !target.private.get(assigneeId)) return Array.from(target.public?.permissions! ?? [])
 
         return Array.from(target.private.get(assigneeId)?.permissions!) ?? []
-    }
+    }*/
 
 
     public async getRemotePermissions<K extends SubjectKey<T>>(resourceUrl: string): Promise<SubjectPermissions<T[K]>[]> {
@@ -112,11 +112,10 @@ export abstract class ODRLPermissionManager<T extends Record<keyof T, BaseSubjec
 
         // Get detailed info about the target
         const interpreter = new PolicyInterpreter();
-        const target: TargetSubjects = interpreter.permissionsForOneResource(resourceUrl, store);
-        
+        //const target: TargetSubjects = interpreter.permissionsForOneResource(resourceUrl, store);
 
 
-        if (target) {
+        /*if (target) {
             const subjectPermissions: SubjectPermissions<T[K]>[] = [];
             // Add the owner information
             subjectPermissions.push({
@@ -152,7 +151,7 @@ export abstract class ODRLPermissionManager<T extends Record<keyof T, BaseSubjec
                 })
             })
             return subjectPermissions;
-        }
+        }*/
 
         return [];
     }

@@ -29,7 +29,7 @@ const onCreate = async () => {
         toast.add({ severity: "warn", summary: "The webId field is required" })
         return false;
     }
-    const entry = await controllerStore.currentController.getItem(podStore.selectedEntry.resourceUrl, {
+    const entry = await controllerStore.currentController.getItem(podStore.selectedEntry.id, {
         type: "webId",
         selector: {
             url: webId.value
@@ -41,12 +41,12 @@ const onCreate = async () => {
         return true;
     }
     try {
-        await controllerStore.currentController.addPermission(podStore.selectedEntry.resourceUrl, Permission.Read, {
+        /*await controllerStore.currentController.addPermission(podStore.selectedEntry.resourceUrl, Permission.Read, {
             type: "webId",
             selector: {
                 url: webId.value
             }
-        })
+        })*/
         await podStore.refreshEntryPermissions(controllerStore.currentController);
         return true;
     } catch (e) {

@@ -11,7 +11,7 @@
             :class="{ error: errors.resourceIdentifier }" placeholder="resource url" />
 
 
-        <span class="field-label">Access request</span>
+        <span class="field-label">Access level</span>
         <div class="action-options" :class="{ error: errors.action }">
             <label v-for="action in AVAILABLE_ACTIONS" :key="action" class="action-pill"
                 :class="{ checked: form.action.includes(action), disabled: !editable }"
@@ -22,9 +22,7 @@
         </div>
 
         <label :for="`purpose`">Purpose</label>
-        <select :id="`purpose`" multiple v-model="form.purposes" :disabled="!editable">
-            <option v-for="purpose in PURPOSE_OPTIONS" :key="purpose" :value="purpose">{{ purpose }}</option>
-        </select>
+        <select :id="`purpose`" ref="purposeSelectEl" multiple></select>
 
         <label :for="`startTime`">Start Time</label>
         <input type="datetime-local" :id="`startTime`" v-model="form.startTime" :disabled="!editable" />
@@ -46,7 +44,7 @@
             </template>
             <template v-else>
                 <button type="button" class="primary" @click.prevent="handleSave">
-                    {{ internalMode === 'create' ? 'request access' : 'save' }}
+                    {{ internalMode === 'create' ? 'Create rule' : 'save' }}
                 </button>
                 <button type="button" class="secondary" @click.prevent="cancel">cancel</button>
             </template>
@@ -57,25 +55,20 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import type { Rule, Constraint, RuleUpdate, Policy } from 'loama-controller';
-import { levelForAction } from '@/lib/accessLevel';
-import type { FlatRule } from '@/lib/policyGrouping';
+import { levelForAction } from '@/lib/Accesslevel';
+import { PURPOSES } from '@/lib/Purposes';
+import { useTomSelectMultiple } from '@/lib/Usetomselect'
 import { usePodStore } from '@/lib/state';
 import { useControllerStore } from '@/stores/useControllerStore';
+import 'tom-select/dist/css/tom-select.css';
 
 const podStore = usePodStore();
 const controllerStore = useControllerStore()
 
-const PURPOSE_OPTIONS = [
-    'dpv:AccountManagement',
-    'dpv:CommercialPurpose',
-    'dpv:CommunicationManagement',
-    'dpv:CustomerManagement',
-];
-
 const AVAILABLE_ACTIONS = ['read', 'append', 'write', 'create', 'control'];
 
 const props = withDefaults(defineProps<{
-    rule?: FlatRule | null;
+    rule?: Rule | null;
     mode?: 'view' | 'edit' | 'create';
     policyId?: string | null;
 }>(), {
@@ -103,8 +96,27 @@ const confirmingDelete = ref(false);
 
 const editable = computed(() => internalMode.value !== 'view');
 
+const purposeSelectEl = ref<HTMLSelectElement | null>(null);
+const purposesModel = computed<string[]>({
+    get: () => form.purposes,
+    set: (value) => { form.purposes = value; },
+});
+
+useTomSelectMultiple(purposeSelectEl, purposesModel, editable, {
+    options: PURPOSES.options,
+    optgroups: PURPOSES.groups,
+    optgroupField: 'group',
+    labelField: 'name',
+    valueField: 'value',
+    searchField: ['name', 'desc', 'value'],
+    render: {
+        optgroup_header: (data: { label: string }) => `<div class="optgroup-header">${data.label}</div>`,
+        option: (data: { name: string; desc: string }) => `<div><strong>${data.name}</strong><div>${data.desc}</div></div>`,
+    },
+});
+
 const heading = computed(() => {
-    if (internalMode.value === 'create') return 'Request access';
+    if (internalMode.value === 'create') return 'Create rule';
     if (internalMode.value === 'edit') return 'Edit rule';
     return 'Rule';
 });
@@ -213,7 +225,7 @@ const handleSave = async () => {
         }
 
     const updatedRule: Rule = {
-        id: props.rule?.ruleId ?? `urn:uuid:${crypto.randomUUID()}`,
+        id: props.rule?.id ?? `urn:uuid:${crypto.randomUUID()}`,
         type: form.type,
         subjectId: form.subjectId.trim(),
         resourceIdentifier: form.resourceIdentifier.trim(),
@@ -239,7 +251,7 @@ const handleDelete = async () => {
     if (!props.rule) return;
 
     const deleteRule: Rule = {
-        id: props.rule.ruleId,
+        id: props.rule.id,
         type: form.type,
         subjectId: props.rule.subjectId,
         resourceIdentifier: props.rule.resourceIdentifier,
@@ -253,6 +265,8 @@ const handleDelete = async () => {
         rule: deleteRule,
         policyId: props.policyId,
     };
+
+    console.log(payload);
 
     podStore.updatePolicy([payload], controllerStore.current);
     confirmingDelete.value = false;
@@ -320,6 +334,58 @@ select.error,
     border-color: var(--lama-red, #e5484d);
 }
 
+:deep(.ts-wrapper) {
+    font-size: calc(var(--base-unit) * 2);
+}
+
+:deep(.ts-control) {
+    padding: 0.5rem 0.75rem;
+    border: 0.125rem solid var(--lama-gray);
+    border-radius: var(--base-corner);
+    background-color: var(--off-white);
+    transition: border-color 0.2s ease;
+}
+
+:deep(.ts-wrapper.focus .ts-control) {
+    border-color: var(--solid-purple);
+}
+
+:deep(.ts-wrapper.disabled .ts-control) {
+    background-color: color-mix(in srgb, var(--lama-gray) 40%, white);
+    color: var(--off-black-50, rgba(23, 13, 51, 0.50));
+    cursor: not-allowed;
+}
+
+:deep(.ts-dropdown) {
+    border: 0.125rem solid var(--lama-gray);
+    border-radius: var(--base-corner);
+    background-color: var(--off-white);
+}
+
+:deep(.ts-dropdown .optgroup-header) {
+    font-weight: 700;
+    color: var(--off-black);
+    padding: 0.4rem 0.75rem 0.1rem;
+    font-size: calc(var(--base-unit) * 1.5);
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+:deep(.ts-dropdown .option strong) {
+    color: var(--off-black);
+}
+
+:deep(.ts-dropdown .option div div) {
+    font-size: calc(var(--base-unit) * 1.5);
+    opacity: 0.7;
+}
+
+:deep(.ts-wrapper .item) {
+    background-color: color-mix(in srgb, var(--solid-purple) 15%, white);
+    color: var(--solid-purple);
+    border-radius: 999px;
+}
+
 .action-options {
     display: flex;
     flex-wrap: wrap;
@@ -350,6 +416,15 @@ select.error,
 
 .action-pill input {
     margin: 0;
+}
+
+.action-pill input:focus-visible {
+    outline: none;
+}
+
+.action-pill:has(input:focus-visible) {
+    outline: 0.125rem solid var(--solid-purple);
+    outline-offset: 0.1875rem;
 }
 
 .actions {
