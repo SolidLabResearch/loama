@@ -74,12 +74,15 @@ const actionStyle = (action: string) => {
 };
 
 const formatDateTime = (raw: string) => {
-    const match = raw.match(/\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}(\.\d+)?z?/i);
-    if (!match) return raw;
-    const isoStr = match[0].replace(/t/i, 'T').replace(/z/i, 'Z');
-    const date = new Date(isoStr);
-    if (Number.isNaN(date.getTime())) return raw;
-    return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    const isoStr = raw.match(/"([^"]+)"/);
+    console.log(raw);
+    console.log(isoStr);
+    if (isoStr) {
+        const formattedDate = isoStr[1].slice(0, 16); 
+        const date = new Date(formattedDate);
+        return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    }
+    return raw;
 };
 
 const purposes = computed(() =>

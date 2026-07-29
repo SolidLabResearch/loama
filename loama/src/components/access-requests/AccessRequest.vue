@@ -76,7 +76,7 @@ const addAccessRequest = async () => {
     constraints.push({
       leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
       operator: 'http://www.w3.org/ns/odrl/2/gt',
-      rightOperand: [`"${startIso}""^^xsd:dateTime"`]
+      rightOperand: [`"${startIso}"^^xsd:dateTime`]
     });
   }
 
@@ -85,7 +85,7 @@ const addAccessRequest = async () => {
     constraints.push({
       leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
       operator: 'http://www.w3.org/ns/odrl/2/lt',
-      rightOperand: [`"${endIso}""^^xsd:dateTime"`]
+      rightOperand: [`"${endIso}"^^xsd:dateTime`]
     });
   }
 
