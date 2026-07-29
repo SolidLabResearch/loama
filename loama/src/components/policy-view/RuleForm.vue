@@ -144,12 +144,13 @@ const resetForm = () => {
                         }
                     });
                 }
-            else if(c.leftOperand == "http://www.w3.org/ns/odrl/2/dateTime"){
-                const isoStr = c.rightOperand[0].match(/^[^"]+/)?.[0];
+            else if (c.leftOperand == "http://www.w3.org/ns/odrl/2/dateTime") {
+                const rawStr = c.rightOperand[0];
+                const isoStr = rawStr.match(/"([^"]+)"/);
+                
 
                 if (isoStr) {
-                    // Format required by <input type="datetime-local">
-                    const formattedDate = isoStr.slice(0, 16); 
+                    const formattedDate = isoStr[1].slice(0, 16);
 
                     if (c.operator == "http://www.w3.org/ns/odrl/2/gt") {
                         form.startTime = formattedDate;
@@ -211,7 +212,7 @@ const handleSave = async () => {
             constraints.push({
             leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
             operator: 'http://www.w3.org/ns/odrl/2/gt',
-            rightOperand: [`"${startIso}""^^xsd:dateTime"`]
+            rightOperand: [`"${startIso}"^^xsd:dateTime`]
             });
         }
 
@@ -220,7 +221,7 @@ const handleSave = async () => {
             constraints.push({
             leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
             operator: 'http://www.w3.org/ns/odrl/2/lt',
-            rightOperand: [`"${endIso}""^^xsd:dateTime"`]
+            rightOperand: [`"${endIso}"^^xsd:dateTime`]
             });
         }
 
