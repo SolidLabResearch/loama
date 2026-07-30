@@ -171,11 +171,29 @@ export class PolicyInterpreter {
                 }
 
                 if (constraint.rightOperand && constraint.rightOperand.length > 0) {
-                for (const operand of constraint.rightOperand) {
-                    const isUri = operand.startsWith('http://') || operand.startsWith('https://');
-                    const rightValue = isUri ? namedNode(operand) : literal(operand);
-                    writer.addQuad(constraintNode, namedNode(`${ODRL}rightOperand`), rightValue);
-                }
+                    for (const operand of constraint.rightOperand) {
+                        let rightValue;
+
+                        if (operand.includes('^^')) {
+                            // Typed literal: "value"^^<http://...> or value^^http://...
+                            const [valuePart, datatypePart] = operand.split('^^');
+
+                            // Clean surrounding quotes or angle brackets if present
+                            const cleanValue = valuePart.replace(/^"|"$/g, '');
+                            const cleanDatatype = datatypePart.replace(/^<|>$/g, '');
+
+                            rightValue = literal(cleanValue, namedNode(cleanDatatype));
+                        } else if (operand.startsWith('http://') || operand.startsWith('https://')) {
+                            // Pure URI / NamedNode
+                            rightValue = namedNode(operand);
+                        } else {
+                            // Plain literal
+                            const cleanValue = operand.replace(/^"|"$/g, '');
+                            rightValue = literal(cleanValue);
+                        }
+
+                        writer.addQuad(constraintNode, namedNode(`${ODRL}rightOperand`), rightValue);
+                    }
                 }
             }
             }

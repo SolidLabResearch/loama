@@ -19,35 +19,37 @@ export interface PurposeOption {
 export interface PurposeGroup {
     value: string;
     label: string;
+    prefix: string;
 }
 
 export const PURPOSE_GROUPS: PurposeGroup[] = [
-    { value: 'Core', label: 'Core' },
-    { value: 'HealthcareManagement', label: 'Healthcare Management' },
+    { value: 'dpv', label: 'DPV', prefix: 'https://w3id.org/dpv#' },
+    { value: 'sector-health', label: 'Healthcare Management', prefix: 'https://w3id.org/dpv/sector/health#' },
 ];
+
 
 export const PURPOSE_OPTIONS: PurposeOption[] = [
     // Core DPV purposes
     {
-        group: 'Core',
+        group: 'dpv',
         value: 'dpv:AccountManagement',
         name: 'AccountManagement',
         desc: 'Creating, providing, maintaining, and otherwise managing a user account.',
     },
     {
-        group: 'Core',
+        group: 'dpv',
         value: 'dpv:CommercialPurpose',
         name: 'CommercialPurpose',
         desc: 'Processing carried out in a commercial setting or with intent to commercialise.',
     },
     {
-        group: 'Core',
+        group: 'dpv',
         value: 'dpv:CommunicationManagement',
         name: 'CommunicationManagement',
         desc: 'Providing or managing communication activities, such as sending a notification email.',
     },
     {
-        group: 'Core',
+        group: 'dpv',
         value: 'dpv:CustomerManagement',
         name: 'CustomerManagement',
         desc: 'Managing activities related to past, current, and future customers.',
@@ -55,43 +57,43 @@ export const PURPOSE_OPTIONS: PurposeOption[] = [
 
     // Healthcare sector purposes, direct children of sector-health:HealthcareManagement
     {
-        group: 'HealthcareManagement',
+        group: 'sector-health',
         value: 'sector-health:HealthcareServiceManagement',
         name: 'HealthcareServiceManagement',
         desc: 'Management of healthcare services themselves.',
     },
     {
-        group: 'HealthcareManagement',
+        group: 'sector-health',
         value: 'sector-health:InsuranceManagement',
         name: 'InsuranceManagement',
         desc: 'Management of insurance as part of providing healthcare services.',
     },
     {
-        group: 'HealthcareManagement',
+        group: 'sector-health',
         value: 'sector-health:Optimisation',
         name: 'Optimisation',
         desc: 'Identifying optimisations to the use and provision of healthcare services.',
     },
     {
-        group: 'HealthcareManagement',
+        group: 'sector-health',
         value: 'sector-health:ResearchDevelopment',
         name: 'ResearchDevelopment',
         desc: 'Research and development regarding healthcare services.',
     },
     {
-        group: 'HealthcareManagement',
+        group: 'sector-health',
         value: 'sector-health:ResourceManagement',
         name: 'ResourceManagement',
         desc: 'Management of resources related to healthcare services.',
     },
     {
-        group: 'HealthcareManagement',
+        group: 'sector-health',
         value: 'sector-health:SecurityManagement',
         name: 'SecurityManagement',
         desc: 'Management of security in relation to healthcare services.',
     },
     {
-        group: 'HealthcareManagement',
+        group: 'sector-health',
         value: 'sector-health:WorkforceManagement',
         name: 'WorkforceManagement',
         desc: 'Management of workforce involved in provision of healthcare services.',
