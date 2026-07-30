@@ -67,7 +67,15 @@ const addAccessRequest = async () => {
     constraints.push({
       leftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
       operator: 'http://www.w3.org/ns/odrl/2/eq',
-      rightOperand: purpose.startsWith('http') ? [purpose] : [`https://w3id.org/dpv#${purpose.replace('dpv:', '')}`]
+      rightOperand: purpose.startsWith('http')
+        ? [purpose]
+        : (() => {
+            const [groupValue, ...termParts] = purpose.split(':');
+            const term = termParts.join(':');
+            const matchedGroup = PURPOSES.groups.find((g) => g.value === groupValue);
+            const prefix = matchedGroup ? matchedGroup.prefix : 'https://w3id.org/dpv#';
+            return [`${prefix}${term}`];
+      })()
     });
   });
 
@@ -76,7 +84,7 @@ const addAccessRequest = async () => {
     constraints.push({
       leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
       operator: 'http://www.w3.org/ns/odrl/2/gt',
-      rightOperand: [`"${startIso}"^^xsd:dateTime`]
+      rightOperand: [`"${startIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
     });
   }
 
@@ -85,7 +93,7 @@ const addAccessRequest = async () => {
     constraints.push({
       leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
       operator: 'http://www.w3.org/ns/odrl/2/lt',
-      rightOperand: [`"${endIso}"^^xsd:dateTime`]
+      rightOperand: [`"${endIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
     });
   }
 

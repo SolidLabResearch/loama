@@ -102,6 +102,8 @@ const purposesModel = computed<string[]>({
     set: (value) => { form.purposes = value; },
 });
 
+console.log(purposesModel);
+
 useTomSelectMultiple(purposeSelectEl, purposesModel, editable, {
     options: PURPOSES.options,
     optgroups: PURPOSES.groups,
@@ -121,6 +123,13 @@ const heading = computed(() => {
     return 'Rule';
 });
 
+function uriToPurposeCurie(uri: string): string | null {
+    const group = PURPOSES.groups.find(g => uri.startsWith(g.prefix));
+    if (!group) return null;
+    const term = uri.slice(group.prefix.length);
+    return `${group.value}:${term}`;
+}
+
 const resetForm = () => {
     internalMode.value = props.mode;
 
@@ -137,24 +146,23 @@ const resetForm = () => {
         props.rule.constraint.forEach(c =>{
             if (c.leftOperand == "http://www.w3.org/ns/odrl/2/purpose") {
                     c.rightOperand.forEach(p => {
-                        const extracted = p.split('/').pop();
-                        if (extracted) {
-                            const formattedPurpose = extracted.replace('#', ':');
-                            form.purposes.push(formattedPurpose);
-                        }
+                        const curie = uriToPurposeCurie(p);
+                        if (curie) form.purposes.push(curie);
                     });
                 }
-            else if (c.leftOperand == "http://www.w3.org/ns/odrl/2/dateTime") {
+            else if (c.leftOperand === "http://www.w3.org/ns/odrl/2/dateTime") {
                 const rawStr = c.rightOperand[0];
-                const isoStr = rawStr.match(/"([^"]+)"/);
-                
+                if (!rawStr) return;
 
-                if (isoStr) {
-                    const formattedDate = isoStr[1].slice(0, 16);
+                const cleanStr = rawStr.split('^^')[0].replace(/^"|"$/g, '');
+                const dateObj = new Date(cleanStr);
 
-                    if (c.operator == "http://www.w3.org/ns/odrl/2/gt") {
+                if (!isNaN(dateObj.getTime())) {
+                    const formattedDate = dateObj.toISOString().slice(0, 16);
+
+                    if (c.operator === "http://www.w3.org/ns/odrl/2/gt" || c.operator === "http://www.w3.org/ns/odrl/2/gteq") {
                         form.startTime = formattedDate;
-                    } else if (c.operator == "http://www.w3.org/ns/odrl/2/lt") {
+                    } else if (c.operator === "http://www.w3.org/ns/odrl/2/lt" || c.operator === "http://www.w3.org/ns/odrl/2/lteq") {
                         form.endTime = formattedDate;
                     }
                 }
@@ -201,9 +209,17 @@ const handleSave = async () => {
 
         form.purposes.forEach(purpose => {
             constraints.push({
-            leftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
-            operator: 'http://www.w3.org/ns/odrl/2/eq',
-            rightOperand: purpose.startsWith('http') ? [purpose] : [`https://w3id.org/dpv#${purpose.replace('dpv:', '')}`]
+                leftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
+                operator: 'http://www.w3.org/ns/odrl/2/eq',
+                rightOperand: purpose.startsWith('http')
+                    ? [purpose]
+                    : (() => {
+                        const [groupValue, ...termParts] = purpose.split(':');
+                        const term = termParts.join(':');
+                        const matchedGroup = PURPOSES.groups.find((g) => g.value === groupValue);
+                        const prefix = matchedGroup ? matchedGroup.prefix : 'https://w3id.org/dpv#';
+                        return [`${prefix}${term}`];
+                })()
             });
         });
 
@@ -212,7 +228,7 @@ const handleSave = async () => {
             constraints.push({
             leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
             operator: 'http://www.w3.org/ns/odrl/2/gt',
-            rightOperand: [`"${startIso}"^^xsd:dateTime`]
+            rightOperand: [`"${startIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
             });
         }
 
@@ -221,7 +237,7 @@ const handleSave = async () => {
             constraints.push({
             leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
             operator: 'http://www.w3.org/ns/odrl/2/lt',
-            rightOperand: [`"${endIso}"^^xsd:dateTime`]
+            rightOperand: [`"${endIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
             });
         }
 

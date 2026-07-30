@@ -84,7 +84,6 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
                         type: 'Agreement'
                     };
 
-                    policy.rules[0].id = `http://example.org/${policy.id}-Rule-${(uuidv4()).toString()}`;
                     policiesMap.set(policy.id, policy);
                     modifiedPolicyIds.add(policy.id);
                 }

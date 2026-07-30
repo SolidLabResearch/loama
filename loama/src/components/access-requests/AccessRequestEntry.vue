@@ -74,13 +74,10 @@ const actionStyle = (action: string) => {
 };
 
 const formatDateTime = (raw: string) => {
-    const isoStr = raw.match(/"([^"]+)"/);
-    console.log(raw);
-    console.log(isoStr);
-    if (isoStr) {
-        const formattedDate = isoStr[1].slice(0, 16); 
-        const date = new Date(formattedDate);
-        return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    const cleanStr = raw.split('^^')[0].replace(/^"|"$/g, '');
+    const dateObj = new Date(cleanStr);
+    if (!isNaN(dateObj.getTime())) {
+        return dateObj.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
     }
     return raw;
 };
