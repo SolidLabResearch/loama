@@ -38,7 +38,7 @@ function flattenPolicies(policies: Policy[]): FlatRule[] {
             ruleId: rule.id,
             policyId: policy.id,
             type: rule.type,
-            subjectId: rule.subjectId,
+            subjectId: rule.subjectId ?? "Public",
             resourceIdentifier: rule.resourceIdentifier,
             action: rule.action,
             constraint: rule.constraint,

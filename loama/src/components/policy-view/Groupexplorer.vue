@@ -102,7 +102,7 @@ const selectGroupBy = (value: 'subject' | 'resource' | 'policy') => {
 const reload = async () => {
     isRefreshing.value = true;
     try {
-        await podStore.loadResources(store.usedPod, controllerStore.current);
+        await podStore.loadPolicies(store.usedPod, controllerStore.current);
     } finally {
         isRefreshing.value = false;
     }

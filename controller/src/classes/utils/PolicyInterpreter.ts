@@ -37,15 +37,22 @@ export class PolicyInterpreter {
      * @param resourceUrl if given, only rules targeting this resource are included
      */
     public storeToPolicies(store: Store, resourceUrl: string = ""): Policy[] {
-        let policies: Policy[] = [];
-        const policyNodes = store.getQuads(null, namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), namedNode("http://www.w3.org/ns/odrl/2/Agreement"), null);
-        const policyIds = policyNodes.map(quad => quad.subject.value);
+        const RDF_TYPE = namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
 
-        policyIds.forEach(polId => {
+        const typeMap: Record<string, Policy['type']> = {
+            "http://www.w3.org/ns/odrl/2/Agreement": 'Agreement',
+            "http://www.w3.org/ns/odrl/2/Set": 'Set',
+        };
+
+        let policies: Policy[] = [];
+        const typeQuads = store.getQuads(null, RDF_TYPE, null, null);
+
+        typeQuads.forEach(quad => {
+            const polId = quad.subject.value;
             const policy: Policy = {
                 id: polId,
                 rules: [],
-                type: 'Agreement'
+                type: typeMap[quad.object.value]
             };
 
             const permissionNodes = store.getObjects(namedNode(polId), ODRL("permission"), null);

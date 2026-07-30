@@ -96,8 +96,6 @@ const addAccessRequest = async () => {
       rightOperand: [`"${endIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
     });
   }
-
-  console.log("aaa");
   
   await controllerStore.current.requestAccess({
     accessRequest: {

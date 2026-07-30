@@ -131,7 +131,6 @@ export interface Constraint {
 	rightOperand: string[];
 }
 
-
 // interface to represent access requests
 export interface AccessRequest {
     uid: string;
@@ -190,7 +189,7 @@ export interface RuleUpdate {
 export interface Rule {
     id: string;
     type: RuleType;
-    subjectId: string;
+    subjectId?: string;
     action: string[];
     resourceIdentifier: string;
     constraint: Constraint[]
@@ -202,4 +201,4 @@ export interface Policy {
     type: PolicyType;
 }
 
-export type PolicyType = 'Agreement' | 'EvaluationRequest';
+export type PolicyType = 'Agreement' | 'EvaluationRequest' | 'Set';
