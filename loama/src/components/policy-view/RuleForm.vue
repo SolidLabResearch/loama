@@ -4,7 +4,7 @@
 
         <label :for="`subject`">Subject</label>
         <input :id="`subject`" v-model="form.subjectId" :disabled="!editable"
-            :class="{ error: errors.subjectId }" placeholder="webId of the person or app" />
+            placeholder="webId of the person or app" />
 
         <label :for="`resource`">Resource</label>
         <input :id="`resource`" v-model="form.resourceIdentifier" :disabled="!editable"
@@ -91,8 +91,14 @@ const form = reactive({
     endTime: '',
 });
 
-const errors = ref({ subjectId: false, resourceIdentifier: false, action: false });
+const errors = ref({ resourceIdentifier: false, action: false });
 const confirmingDelete = ref(false);
+
+watch(() => form.action.length, (newLength) => {
+    if (newLength > 0 && errors.value.action) {
+        errors.value.action = false;
+    }
+});
 
 const editable = computed(() => internalMode.value !== 'view');
 
@@ -101,8 +107,6 @@ const purposesModel = computed<string[]>({
     get: () => form.purposes,
     set: (value) => { form.purposes = value; },
 });
-
-console.log(purposesModel);
 
 useTomSelectMultiple(purposeSelectEl, purposesModel, editable, {
     options: PURPOSES.options,
@@ -179,7 +183,7 @@ const resetForm = () => {
         form.endTime = '';
     }
 
-    errors.value = { subjectId: false, resourceIdentifier: false, action: false };
+    errors.value = { resourceIdentifier: false, action: false };
     confirmingDelete.value = false;
 };
 
@@ -192,10 +196,9 @@ const actionStyle = (action: string) => {
 };
 
 const validate = () => {
-    errors.value.subjectId = !form.subjectId.trim();
     errors.value.resourceIdentifier = !form.resourceIdentifier.trim();
     errors.value.action = form.action.length === 0;
-    return !(errors.value.subjectId || errors.value.resourceIdentifier || errors.value.action);
+    return !(errors.value.resourceIdentifier || errors.value.action);
 };
 
 const startEdit = () => {
@@ -283,8 +286,6 @@ const handleDelete = async () => {
         policyId: props.policyId,
     };
 
-    console.log(payload);
-
     podStore.updatePolicy([payload], controllerStore.current);
     confirmingDelete.value = false;
     emit('close');
@@ -349,6 +350,10 @@ input.error,
 select.error,
 .action-options.error {
     border-color: var(--lama-red, #e5484d);
+}
+
+div.error label{
+    border: 2px solid var(--lama-red, #e5484d) !important;
 }
 
 :deep(.ts-wrapper) {

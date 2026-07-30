@@ -12,7 +12,7 @@ export const usePodStore = defineStore("pod", {
         policies: [],
     }),
    actions: {
-        async loadResources(url: string, controller: IController<{webId: WebIdSubject; public: PublicSubject;}>) {
+        async loadPolicies(url: string, controller: IController<{webId: WebIdSubject; public: PublicSubject;}>) {
             this.policies = await controller.getResourcePolicies(url);
         },
         async updatePolicy(ruleUpdates: RuleUpdate[], controller: IController<{webId: WebIdSubject; public: PublicSubject;}>) {

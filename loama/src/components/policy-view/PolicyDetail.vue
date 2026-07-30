@@ -19,7 +19,7 @@
                     <tr v-for="rule in selectedPolicy.rules" :key="rule.id" class="rule-row" tabindex="0"
                         @click="openRule(rule)" @keydown.enter.prevent="openRule(rule)"
                         @keydown.space.prevent="openRule(rule)">
-                        <td class="id-cell">{{ rule.subjectId }}</td>
+                        <td class="id-cell">{{ rule.subjectId ?? "Public" }}</td>
                         <td class="id-cell">{{ rule.resourceIdentifier }}</td>
                         <td>
                             <span class="type-chip" :class="rule.type">{{ rule.type }}</span>
