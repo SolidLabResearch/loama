@@ -1,3 +1,5 @@
+# Depricated this is fixed
+
 # The Cold Start Problem
 
 LOAMA allows users to manage their own user-managed policies for content access.
