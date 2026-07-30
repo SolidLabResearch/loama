@@ -3,7 +3,7 @@
         <h2>{{ heading }}</h2>
 
         <label :for="`subject`">Subject</label>
-        <input :id="`subject`" v-model="form.subjectId" :disabled="!editable"
+        <input :id="`subject`" v-model="form.subjectId" :disabled="!subjectEditable"
             placeholder="webId of the person or app" />
 
         <label :for="`resource`">Resource</label>
@@ -71,10 +71,12 @@ const props = withDefaults(defineProps<{
     rule?: Rule | null;
     mode?: 'view' | 'edit' | 'create';
     policyId?: string | null;
+    initialSubjectId?: string | null;
 }>(), {
     rule: null,
     mode: 'view',
-    policyId: null
+    policyId: null,
+    initialSubjectId: null
 });
 
 const emit = defineEmits(['close']);
@@ -101,6 +103,14 @@ watch(() => form.action.length, (newLength) => {
 });
 
 const editable = computed(() => internalMode.value !== 'view');
+
+const selectedPolicy = computed(() => {
+    return podStore.policies.find((p) => p.id === props.policyId) ?? null;
+});
+
+const subjectEditable = computed(() => {
+    return editable.value && selectedPolicy.value?.type !== 'Agreement';
+});
 
 const purposeSelectEl = ref<HTMLSelectElement | null>(null);
 const purposesModel = computed<string[]>({
@@ -174,7 +184,7 @@ const resetForm = () => {
         });
 
     } else {
-        form.subjectId = '';
+        form.subjectId = props.initialSubjectId ?? '';
         form.resourceIdentifier = '';
         form.type = 'Permission';
         form.action = [];
