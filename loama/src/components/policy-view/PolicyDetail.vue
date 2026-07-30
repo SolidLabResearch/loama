@@ -2,6 +2,7 @@
     <div class="container">
         <header>
             <h2>{{ policyId }}</h2>
+            <span v-if="selectedPolicy" class="policy-type-chip">{{ selectedPolicy.type }}</span>
         </header>
         <section class="rule-section">
             <div v-if="!selectedPolicy" class="empty-cell">No matches</div>
@@ -58,7 +59,7 @@
             <RuleForm v-if="selectedRule" :rule="selectedRule" mode="view" :policy-id="selectedPolicy?.id" @close="ruleDetailsVisible = false"/>
         </Drawer>
         <Drawer style="width: 80vw" v-model:visible="addRuleVisible" position="right" class="policy-details-drawer">
-            <RuleForm mode="create" :policy-id="policyId" @close="addRuleVisible = false"/>
+            <RuleForm mode="create" :policy-id="policyId" :initial-subject-id="existingSubjectId" @close="addRuleVisible = false"/>
         </Drawer>
     </div>
 </template>
@@ -107,6 +108,11 @@ const actionStyle = (action: string) => {
     const level = levelForAction(action);
     return { backgroundColor: level.color, color: level.textColor };
 };
+
+const existingSubjectId = computed(() => {
+    if (selectedPolicy.value?.type !== 'Agreement') return null;
+    return selectedPolicy.value.rules[0]?.subjectId ?? null;
+});
 
 const shorten = (uri: string) => uri.split(/[/#]/).filter(Boolean).pop() ?? uri;
 
@@ -353,5 +359,16 @@ button.danger:hover {
 button.add-button{
     background-color: green;
     border-color: green;
+}
+
+.policy-type-chip {
+    font-weight: 700;
+    text-transform: capitalize;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: calc(var(--base-unit) * 1.5);
+    background-color: var(--off-white);
+    color: var(--solid-purple);
+    flex-shrink: 0;
 }
 </style>
