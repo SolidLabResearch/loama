@@ -17,9 +17,9 @@ These commands automate the creation of local policies and access requests betwe
 git clone git@github.com:SolidLabResearch/loama.git
 cd loama
 git checkout feat/odrl
-nvm use 20
-npm install
-npm run build
+corepack enable
+yarn install
+yarn build
 ```
 
 ### UMA setup
@@ -38,7 +38,7 @@ yarn build
 1. Start the backend services by following the initialization script in the `SolidLabResearch/user-managed-access` README.
 2. Launch the development server:
    ```sh
-   npm run dev
+   yarn dev
    ```
 
 ### UMA server
@@ -113,7 +113,7 @@ curl.exe --% --location "http://localhost:4000/uma/requests" --header "Authoriza
 You can evaluate state machine accuracy after an approval using the ``trustflows-client``. *Note we used v0.1.0-alpha.6*
 
 ```
-npm install trustflows-client@0.1.0-alpha.6
+yarn add trustflows-client@0.1.0-alpha.6
 ```
 
 ```ts
