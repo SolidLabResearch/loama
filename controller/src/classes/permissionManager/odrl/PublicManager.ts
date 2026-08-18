@@ -6,8 +6,8 @@ import { ODRLPermissionManager } from "./OdrlPermissionManager";
 export class PublicManager<T extends Record<keyof T, BaseSubject<keyof T & string>>> extends ODRLPermissionManager<T> implements IPermissionManager<T> {
 
     //. NOTE: Currently, it doesn't do any recursive permission setting on containers
-    async createPermissions<K extends SubjectKey<T>>(resource: string, subject: T[K], permissions: Permission[]): Promise<void> {
-        await new ODRLPolicyService(this.authorizationServerURL).insertActionRule(resource, permissions)
+    async createPermissions<K extends SubjectKey<T>>(resource: string, subject: T[K], permissions: Permission[], owner: string): Promise<void> {
+        await new ODRLPolicyService(this.authorizationServerURL).insertActionRule(resource, permissions, owner)
     }
 
     async deletePermissions<K extends SubjectKey<T>>(resource: string, subject: T[K], permissions: Permission[]) {

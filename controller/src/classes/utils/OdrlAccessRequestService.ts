@@ -1,28 +1,27 @@
+import { authenticatedFetch, getLoggedInIdentifier } from './Authentication';
 import { AccessRequest } from "@/types/modules";
 import { QueryEngine } from "@comunica/query-sparql";
 import { Parser, Store } from "n3";
 import { v4 as uuid } from 'uuid';
 
 export class ODRLAccessRequestService {
-    
+
     private readonly queryEngine = new QueryEngine();
     private readonly parser = new Parser({ format: 'text/turtle' });
-    
+
     constructor(
         private readonly authorizationServerURL: string
     ) {}
 
     /**
-     * Place a POST request to create an access request to an UMA backend
-     * @param accessRequest - all infromation regarding an access request
+     * Place a POST request to create an access request to a UMA backend
+     * @param accessRequest - all information regarding an access request
      */
     public requestAccess = async (accessRequest: AccessRequest): Promise<void> => {
-        const response = await fetch(
+        const response = await authenticatedFetch(
             `${this.authorizationServerURL}/requests`, {
                 method: 'POST',
-                headers: {
-                    'authorization': `WebID ${encodeURIComponent(accessRequest.requestingParty)}`
-                }, body: await this.accessRequestToJson(accessRequest)
+                body: await this.accessRequestToJson(accessRequest)
             }
         );
 
@@ -32,13 +31,13 @@ export class ODRLAccessRequestService {
     /**
      * Transform accessrequest to required JSON format
      * @param accessRequest - all information regarding an access request
-     * @returns 
+     * @returns
      */
     private accessRequestToJson = async (accessRequest: AccessRequest): Promise<string> => {
         const payload: any = {
             resource_id: accessRequest.target,
-            resource_scopes: 
-            accessRequest.actions.map(action => 
+            resource_scopes:
+            accessRequest.actions.map(action =>
             action.startsWith('http') ? action : `http://www.w3.org/ns/odrl/2/${action}`
         )
         };
@@ -65,19 +64,16 @@ export class ODRLAccessRequestService {
     /**
      * Place a PATCH request to update an access request to an UMA backend
      * @param accessRequestID - ID of the access request to update
-     * @param resourceOwner - user credentials of the resource owner
      * @param status - new status for the update, must either be 'accepted' or 'denied'
      */
     public acceptOrDenyAccess = async (
         accessRequestID: string,
-        resourceOwner: string,
         status: 'accepted' | 'denied'
     ): Promise<void> => {
-        const response = await fetch(
+        const response = await authenticatedFetch(
             `${this.authorizationServerURL}/requests/${encodeURIComponent(accessRequestID)}`, {
                 method: 'PATCH',
                 headers: {
-                    'authorization': `WebID ${encodeURIComponent(resourceOwner)}`,
                     'content-type': 'application/json'
                 }, body: JSON.stringify({ status: status })
             }
@@ -88,16 +84,12 @@ export class ODRLAccessRequestService {
 
     /**
      * Retrieve all access requests related to the given resource owner or requesting party
-     * @param resourceOwnerOrRequestingPartyID - ID of the resource owner or requesting party
      */
-    public retrieveAccessRequests = async (resourceOwnerOrRequestingPartyID: string): Promise<{ asRequestingParty: AccessRequest[], asResourceOwner: AccessRequest[] }> => {
+    public retrieveAccessRequests = async (): Promise<{ asRequestingParty: AccessRequest[], asResourceOwner: AccessRequest[] }> => {
         const [ requestsResponse, policiesResponse ] = await Promise.all(
-            ['/requests', '/policies'].map((endpoint) => fetch(
+            ['/requests', '/policies'].map((endpoint) => authenticatedFetch(
                 `${this.authorizationServerURL}${endpoint}`, {
                     method: 'GET',
-                    headers: {
-                        'authorization': `WebID ${encodeURIComponent(resourceOwnerOrRequestingPartyID)}`
-                    }
                 }
             ))
         );
@@ -113,12 +105,13 @@ export class ODRLAccessRequestService {
         const requestsStore = new Store(this.parser.parse(requestsText));
         const policiesStore = new Store(this.parser.parse(policiesText));
 
+        const id = getLoggedInIdentifier();
         const requestingPartyBindings = await this.queryEngine.queryBindings(
-            this.accessRequestForRequestingParty(resourceOwnerOrRequestingPartyID), { sources: [requestsStore] }
+            this.accessRequestForRequestingParty(id), { sources: [requestsStore] }
         );
 
         const resourceOwnerBindings = await this.queryEngine.queryBindings(
-            this.accessRequestForResourceOwner(resourceOwnerOrRequestingPartyID), { sources: [requestsStore, policiesStore] }
+            this.accessRequestForResourceOwner(id), { sources: [requestsStore, policiesStore] }
         );
 
         return {
@@ -128,9 +121,9 @@ export class ODRLAccessRequestService {
     }
 
     /**
-     * Transform raw bindings to AccessRequest objects 
-     * @param bindings 
-     * @returns 
+     * Transform raw bindings to AccessRequest objects
+     * @param bindings
+     * @returns
      */
     private bindingsToAccessRequest = async (bindings: any): Promise<AccessRequest[]> => {
         const requestsMap = new Map<string, AccessRequest>();
@@ -202,8 +195,8 @@ export class ODRLAccessRequestService {
     /**
      * Fetches all access requests submitted by a given WebId
      * Returns a SPARQL query string
-     * @param requestingPartyID 
-     * @returns 
+     * @param requestingPartyID
+     * @returns
      */
     private readonly accessRequestForRequestingParty = (requestingPartyID: string): string => `
         PREFIX ex: <http://example.org/>
@@ -234,8 +227,13 @@ export class ODRLAccessRequestService {
     /**
      * Fetches all access requests controlled by a given WebId
      * Returns a SPARQL query string
-     * @param resourceOwnerID 
-     * @returns 
+     *
+     * An ID being the resource owner is determined by there being a policy owned by this ID targeting this resource.
+     * If there is no policy yet for this resource,
+     * this function will not be able to determine that the given ID is the owner.
+     *
+     * @param resourceOwnerID
+     * @returns
      */
     private readonly accessRequestForResourceOwner = (resourceOwnerID: string): string => `
         PREFIX ex: <http://example.org/>

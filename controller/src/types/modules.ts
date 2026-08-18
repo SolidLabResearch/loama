@@ -14,10 +14,10 @@ export interface IController<T extends Record<keyof T, BaseSubject<keyof T & str
     unsetPodUrl(podUrl: string): void;
     getLabelForSubject<K extends SubjectKey<T>>(subject: T[K]): string;
     getOrCreateIndex(): Promise<Index>;
-    
+
     updatePolicy(updates: RuleUpdate[]): Promise<void>;
     getResourcePolicies(resourceUrl: string): Promise<Policy[]>;
-    
+
     /**
     * Enables a the permissions for an existing subject
     * @throws Error if the item does not exist for the given subject
@@ -88,7 +88,7 @@ export interface ISubjectResolver<T extends BaseSubject<string>> {
 
 export interface IPermissionManager<T = Record<string, BaseSubject<string>>> {
     // Does not update the index file
-    createPermissions<K extends SubjectKey<T>>(resource: string, subject: T[K], permissions: Permission[]): Promise<void>
+    createPermissions<K extends SubjectKey<T>>(resource: string, subject: T[K], permissions: Permission[], owner: string): Promise<void>
     // Does not update the index file
     editPermissions<K extends SubjectKey<T>>(resource: string, item: IndexItem, subject: T[K], permissions: Permission[]): Promise<void>
     deletePermissions<K extends SubjectKey<T>>(resource: string, subject: T[K], permissions: Permission[]): Promise<void>

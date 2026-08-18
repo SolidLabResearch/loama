@@ -1,4 +1,3 @@
-import { getDefaultSession } from "@inrupt/solid-client-authn-browser";
 import { BaseSubject, Index, Permission, Resources } from "../types";
 import { IController, IInboxConstructor, IStore, IStoreConstructor, SubjectConfig, SubjectConfigs, SubjectKey, SubjectType } from "../types/modules";
 import { type AccessRequest as AccessRequestObject, Policy, Rule, RuleUpdate } from "../types/modules";
@@ -57,23 +56,21 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
     /**
      * Updates existing policies according to present rule changes
      * @param updates All requested changes
-     * @returns 
+     * @returns
      */
     async updatePolicy(updates: RuleUpdate[]): Promise<void> {
 
         if (updates.length === 0) return;
 
-        const webId = getDefaultSession().info.webId;
-        if (!webId) throw new Error("User not logged in");
         const service = new ODRLPolicyService(this.authorizationServerURL);
 
-        const store = await service.fetchPolicies(webId);
+        const store = await service.fetchPolicies();
         const interpreter = new PolicyInterpreter();
         const allPolicies = interpreter.storeToPolicies(store);
 
         const policiesMap = new Map<string, Policy>(allPolicies.map(p => [p.id, p]));
         const modifiedPolicyIds = new Set<string>();
-        
+
         for (const update of updates) {
             if (!update.policyId){
                 if(update.updateType == 'add'){
@@ -88,7 +85,7 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
                     modifiedPolicyIds.add(policy.id);
                 }
                 continue;
-                
+
             }
             const policy = policiesMap.get(update.policyId);
             if (!policy) continue;
@@ -115,12 +112,12 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
         const savePromises = Array.from(modifiedPolicyIds).map(async (policyId) => {
             const policy = policiesMap.get(policyId)!;
             if(policy.rules.length == 0){
-                await service.deletePolicy(webId, policyId);
+                await service.deletePolicy(policyId);
             }
             else{
                 // Convert JS Policy object back to Turtle format
-                const turtleText = interpreter.policyToTurtle(webId, policy); 
-                await service.putPolicy(webId, policyId, turtleText);
+                const turtleText = interpreter.policyToTurtle(policy);
+                await service.putPolicy(policyId, turtleText);
             }
         });
 
@@ -133,11 +130,7 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
      * @returns Policy object
      */
     async getResourcePolicies(resourceUrl: string): Promise<Policy[]> {
-        const webId = getDefaultSession().info.webId;
-        if (!webId) {
-            throw new Error("User not logged in");
-        }
-        const store = await new ODRLPolicyService(this.authorizationServerURL).fetchPolicies(webId);
+        const store = await new ODRLPolicyService(this.authorizationServerURL).fetchPolicies();
         return new PolicyInterpreter().storeToPolicies(store, resourceUrl);
     }
 
@@ -160,20 +153,17 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
 
     // ! added for access requests
     async requestAccess(permission: { accessRequest: AccessRequestObject}): Promise<void> {
-        const webid = getDefaultSession().info.webId!;
-        permission.accessRequest.requestingParty = webid;
-    await new ODRLAccessRequestService(this.authorizationServerURL).requestAccess(permission.accessRequest);
+        return new ODRLAccessRequestService(this.authorizationServerURL).requestAccess(permission.accessRequest);
     }
 
     async handleAccessRequest(requestId: string, status: 'accepted' | 'denied'): Promise<void> {
-        const webid = getDefaultSession().info.webId!;
-        await new ODRLAccessRequestService(this.authorizationServerURL).acceptOrDenyAccess(requestId, webid, status);
+        return new ODRLAccessRequestService(this.authorizationServerURL).acceptOrDenyAccess(requestId, status);
     }
 
     async getAccessRequests(): Promise<{
         asRequestingParty: AccessRequestObject[];
         asResourceOwner: AccessRequestObject[];
     }> {
-        return new ODRLAccessRequestService(this.authorizationServerURL).retrieveAccessRequests(getDefaultSession().info.webId!);
+        return new ODRLAccessRequestService(this.authorizationServerURL).retrieveAccessRequests();
     }
 }
