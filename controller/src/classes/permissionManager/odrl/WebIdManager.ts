@@ -6,8 +6,8 @@ import { ODRLPolicyService } from "../../utils/OdrlPolicyService";
 export class WebIdManager<T extends Record<keyof T, BaseSubject<keyof T & string>>> extends ODRLPermissionManager<T> implements IPermissionManager<T> {
 
     // Create an action for this resource and this subject with the given permissions
-    async createPermissions<K extends SubjectKey<T>>(resource: string, subject: T[K], permissions: Permission[]): Promise<void> {
-        await new ODRLPolicyService(this.authorizationServerURL).insertActionRule(resource, permissions, subject.selector!.url);
+    async createPermissions<K extends SubjectKey<T>>(resource: string, subject: T[K], permissions: Permission[], owner: string): Promise<void> {
+        await new ODRLPolicyService(this.authorizationServerURL).insertActionRule(resource, permissions, subject.selector!.url, owner);
     }
 
     async deletePermissions<K extends SubjectKey<T>>(resource: string, subject: T[K], permissions: Permission[]) {

@@ -1,3 +1,4 @@
+import { getLoggedInIdentifier } from './Authentication';
 import { Constraint, ISpecificTargetInfo, Policy, Rule } from "../../types/modules";
 import { DataFactory, Store, Writer } from "n3";
 import { ODRL } from "./PolicyParser";
@@ -11,7 +12,7 @@ export class PolicyInterpreter {
     /**
     * Extract the quads of one subject, and recursively add whatever their object is referring to
     * @param store store to extract subject from
-    * @param subjectIRI 
+    * @param subjectIRI
     * @param existing IDs that have already been added to the store
     * @returns detailed store of the original subject and all of their children
     */
@@ -32,7 +33,7 @@ export class PolicyInterpreter {
     }
 
     /**
-     * transforms N3 data-store object to Policy object 
+     * transforms N3 data-store object to Policy object
      * @param store the fetched policies
      * @param resourceUrl if given, only rules targeting this resource are included
      */
@@ -66,7 +67,7 @@ export class PolicyInterpreter {
                 const constraintNodes = store.getObjects(permNamedNode, ODRL("constraint"), null);
 
                 const actions = actionNodes.map(node => node.value);
-                const targets = targetNodes.map(node => node.value); 
+                const targets = targetNodes.map(node => node.value);
                 const assignees = assigneeNodes.map(node => node.value);
                 const assigners = assignerNodes.map(node => node.value);
                 const constraintIds = constraintNodes.map(node => node.value);
@@ -79,13 +80,13 @@ export class PolicyInterpreter {
                     resourceIdentifier: targets[0],
                     constraint: []
                 }
-                
+
                 constraintIds.forEach(constrId =>{
                     const constrNamedNode = namedNode(constrId);
                     const leftOperandNodes = store.getObjects(constrNamedNode, ODRL("leftOperand"), null);
                     const operatorNodes = store.getObjects(constrNamedNode, ODRL("operator"), null);
                     const rightOperandNodes = store.getObjects(constrNamedNode, ODRL("rightOperand"), null);
-                    
+
                     const leftOperand = leftOperandNodes[0]?.value;
                     const operator = operatorNodes[0]?.value;
                     const rightOperand = rightOperandNodes.map(node => node.value);
@@ -108,11 +109,10 @@ export class PolicyInterpreter {
 
     /**
      * Transform policy object to a turtle-string
-     * @param webId 
-     * @param policy 
-     * @returns 
+     * @param policy
+     * @returns
      */
-    public policyToTurtle(webId: string, policy: Policy): string {
+    public policyToTurtle(policy: Policy): string {
         const ODRL = 'http://www.w3.org/ns/odrl/2/';
         const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
 
@@ -145,7 +145,7 @@ export class PolicyInterpreter {
             writer.addQuad(ruleNode, namedNode(`${ODRL}assignee`), namedNode(rule.subjectId));
             }
 
-            writer.addQuad(ruleNode, namedNode(`${ODRL}assigner`), namedNode(webId));
+            writer.addQuad(ruleNode, namedNode(`${ODRL}assigner`), namedNode(getLoggedInIdentifier()));
 
             if (rule.action && rule.action.length > 0) {
             for (const act of rule.action) {

@@ -1,15 +1,15 @@
-import { getDefaultSession } from "@inrupt/solid-client-authn-browser";
+import { authenticatedFetch } from './Authentication';
 import { Permission } from "../../types";
 import { ODRL, PolicyParser } from "./PolicyParser";
 import { DataFactory } from "n3";
 const { namedNode } = DataFactory;
 
-export const UMA_URL = (authorizationServerURL: string, encodedId: string = "") => 
+export const UMA_URL = (authorizationServerURL: string, encodedId: string = "") =>
     `${authorizationServerURL}/policies${encodedId}`;
 
 export class ODRLPolicyService {
     private readonly authorizationServerURL: string;
-    constructor(authorizationServerURL: string) { 
+    constructor(authorizationServerURL: string) {
         this.authorizationServerURL = authorizationServerURL;
     }
 
@@ -24,11 +24,10 @@ export class ODRLPolicyService {
         return result;
     }
 
-    public async fetchPolicies(webId: string) {
+    public async fetchPolicies() {
         // Get all our policies
-        const response = await fetch(UMA_URL(this.authorizationServerURL), {
+        const response = await authenticatedFetch(UMA_URL(this.authorizationServerURL), {
             headers: {
-                "Authorization": `WebID ${encodeURIComponent(webId)}`,
                 "Accept": "text/turtle"
             }
         });
@@ -42,11 +41,10 @@ export class ODRLPolicyService {
         return parser.parseText(turtleText);
     }
 
-    public async fetchOnePolicy(webId: string, policyId: string) {
+    public async fetchOnePolicy(policyId: string) {
         // Get all our policies
-        const response = await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
+        const response = await authenticatedFetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
             headers: {
-                "Authorization": `WebID ${encodeURIComponent(webId)}`,
                 "Accept": "text/turtle"
             }
         });
@@ -58,11 +56,10 @@ export class ODRLPolicyService {
         return parser.parseText(turtleText);
     }
 
-    public async postPolicy(webId: string, body: string) {
-        await fetch(UMA_URL(this.authorizationServerURL), {
+    public async postPolicy(body: string) {
+        await authenticatedFetch(UMA_URL(this.authorizationServerURL), {
             method: 'POST',
             headers: {
-                'Authorization': `WebID ${encodeURIComponent(webId)}`,
                 'Content-type': 'text/turtle'
                 // 'Content-type': 'application/sparql-update'
             },
@@ -70,31 +67,26 @@ export class ODRLPolicyService {
         })
     }
 
-    public async putPolicy(webId: string, policyId: string, body: string) {
-        await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
+    public async putPolicy(policyId: string, body: string) {
+        await authenticatedFetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
             method: 'PUT',
             headers: {
-                'Authorization': `WebID ${encodeURIComponent(webId)}`,
                 'Content-type': 'text/turtle'
             },
             body: body
         })
     }
 
-    public async deletePolicy(webId: string, policyId: string) {
-        await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
+    public async deletePolicy(policyId: string) {
+        await authenticatedFetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
             method: 'DELETE',
-            headers: {
-                'Authorization': `WebID ${encodeURIComponent(webId)}`,
-            }
         })
     }
 
-    public async patchPolicy(webId: string, policyId: string, body: string) {
-        await fetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
+    public async patchPolicy(policyId: string, body: string) {
+        await authenticatedFetch(UMA_URL(this.authorizationServerURL,`/${encodeURIComponent(policyId)}`), {
             method: 'PATCH',
             headers: {
-                'Authorization': `WebID ${encodeURIComponent(webId)}`,
                 'Content-type': 'application/sparql-update'
             },
             body: body
@@ -105,11 +97,9 @@ export class ODRLPolicyService {
     /**
      * Function to insert an action rule for each permission in the provided array. They will be inserted in a new policy, via POST and not PATCH.
      */
-    public async insertActionRule(targetId: string, actions: Permission[], assignee: string = ""): Promise<void> {
-        const webId = getDefaultSession().info.webId!
-
+    public async insertActionRule(targetId: string, actions: Permission[], owner: string, assignee: string = ""): Promise<void> {
         // Find out if this target already has a policy
-        const store = (await this.fetchPolicies(webId));
+        const store = await this.fetchPolicies();
         const ruleIds = store.getQuads(null, ODRL('target'), namedNode(targetId), null).map(quad => quad.subject);
         const policyIds = new Set<string>();
         ruleIds.forEach(ruleId =>
@@ -128,7 +118,7 @@ export class ODRLPolicyService {
 
 
         for (const action of actions) {
-            // We need a proper way to create new rules, probably better server side? 
+            // We need a proper way to create new rules, probably better server side?
             const ruleId = `http://example.org/rule${this.getRandomString(20)}`;
 
             // Define the new triples in the rule
@@ -140,7 +130,7 @@ export class ODRLPolicyService {
             // The response contains the full and updated version of the policy, which we cannot return in this interface
             // If there already exists a policy for this target, patch this rule into it. Otherwise, just post a new one
             const response = policyIds.size > 0
-                ? this.patchPolicy(webId, policyId, `
+                ? this.patchPolicy(policyId, `
 PREFIX odrl: <http://www.w3.org/ns/odrl/2/>
 INSERT {
     <${policyId}> odrl:permission <${ruleId}> .
@@ -148,11 +138,11 @@ INSERT {
         odrl:target <${targetId}> ;
         ${actionTriple}
         ${assigneeTriple}
-        odrl:assigner <${webId}> .
+        odrl:assigner <${owner}> .
 }
 WHERE {}`)
 // ! this branch below has no use, as the current version of LOAMA is unable to create new policies on its own, it can only discover the policies already sent.
-                : this.postPolicy(webId, `
+                : this.postPolicy(`
 @prefix odrl: <http://www.w3.org/ns/odrl/2/> .
 <${policyId}> a odrl:Agreement ;
     odrl:uid <${policyId}> ;
@@ -162,23 +152,19 @@ WHERE {}`)
     odrl:target <${targetId}> ;
     ${actionTriple}
     ${assigneeTriple}
-    odrl:assigner <${webId}> .
+    odrl:assigner <${owner}> .
 `)
         }
     }
 
     /**
-     * Funcion that searches every owned rule by the logged on client, finds the target 
+     * Funcion that searches every owned rule by the logged on client, finds the target
      * of an assigner and deletes the actions on it
      */
     public async deleteActionRule(targetId: string, actions: Permission[], assignee: string = ""): Promise<void> {
-        const session = getDefaultSession();
-        const webId = session.info.webId!;
-
         // 1: Fetch the policy contents
-        const response = await fetch(UMA_URL(this.authorizationServerURL), {
+        const response = await authenticatedFetch(UMA_URL(this.authorizationServerURL), {
             headers: {
-                Authorization: `WebID ${encodeURIComponent(webId)}`,
                 Accept: "text/turtle"
             }
         });
@@ -235,11 +221,10 @@ WHERE {}`)
         // 4: Delete the rule that has the matching target and permission for the matching assignee
         for (const policyId of policyIds.keys()) {
             for (const ruleId of policyIds.get(policyId)!) {
-                const deleteResponse = await fetch(
+                const deleteResponse = await authenticatedFetch(
                     UMA_URL(this.authorizationServerURL, `/${encodeURIComponent(policyId)}`), {
                         method: "PATCH",
                         headers: {
-                            "Authorization": `WebID ${encodeURIComponent(webId)}`,
                             "Content-type": "application/sparql-update",
                         },
                         body: `
