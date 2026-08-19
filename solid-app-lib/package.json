@@ -24,8 +24,8 @@
     },
     "dependencies": {
         "@inrupt/solid-client": "^2.0.1",
-        "@inrupt/solid-client-authn-browser": "^2.2.4",
-        "loama-common": "^1.0.0"
+        "loama-common": "^1.0.0",
+        "oidc-client-ts": "^3.5.0"
     },
     "devDependencies": {
         "typescript": "^5.5.4"

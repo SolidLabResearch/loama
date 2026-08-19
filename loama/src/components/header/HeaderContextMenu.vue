@@ -39,11 +39,14 @@
 import router from '@/router';
 import { store } from 'loama-app';
 import { PhSignOut } from '@phosphor-icons/vue';
-import { listPodUrls } from 'loama-common';
 import { useControllerStore } from '@/stores/useControllerStore';
 import { computed, ref } from 'vue';
 
-const pods = await listPodUrls(store.session);
+const pods = computed(() => {
+  if (store.usedPod) return [store.usedPod];
+  if (store.oidcSettings?.authority) return [store.oidcSettings.authority];
+  return [];
+});
 const controllerStore = useControllerStore();
 const types = computed(() => Array.from(controllerStore.types));
 
@@ -59,8 +62,11 @@ function updateController() {
 
 async function logout() {
   if (controllerStore.current) controllerStore.current.unsetPodUrl("");
-  store.session.logout();
-  router.push('/');
+  try {
+    await store.getOidcManager().signoutRedirect();
+  } catch {
+    router.push('/');
+  }
 }
 </script>
 
