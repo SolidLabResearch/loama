@@ -24,10 +24,7 @@ import LoButton from '../LoButton.vue'
 import HeaderContextMenu from './HeaderContextMenu.vue'
 import { PhShareFat } from '@phosphor-icons/vue';
 
-import { getProfileInfo } from "loama-common";
-import { store } from 'loama-app'
-
-const pfpSrc = (await getProfileInfo(store.session, store.usedPod.replace(/\/$/, ''))).img;
+const pfpSrc = `${import.meta.env.BASE_URL}profile.svg`;
 const isContextMenuHidden = ref(true)
 
 

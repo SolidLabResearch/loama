@@ -32,6 +32,7 @@ import { ref } from 'vue';
 import { store } from 'loama-app'
 import LoButton from './LoButton.vue';
 import { PhArrowRight, PhLink, PhQuestion } from '@phosphor-icons/vue';
+import { getOrRegisterDynamicClient } from '@/lib/oidcDynamicRegistration';
 
 defineProps<{ title: string, subtitle?: string }>();
 
@@ -46,26 +47,53 @@ const defaultSolidPodUrl = import.meta.env.VITE_DEFAULT_IDP;
 const showWarning = ref<boolean>(false);
 const isLoading = ref<boolean>(false);
 
-const login = () => {
+const login = async () => {
     isLoading.value = true;
+    showWarning.value = false;
+
     const issuer = solidPodUrl.value.trim() || defaultSolidPodUrl;
+    const configuredClientId = import.meta.env.VITE_OIDC_CLIENT_ID?.trim();
 
     const searchParams = new URLSearchParams(location.search)
     const nextPath = searchParams.get("next") ?? "home"
 
-    store.session.login({
-        oidcIssuer: issuer,
-        redirectUrl: new URL(`${import.meta.env.BASE_URL}${nextPath}/`, window.location.href).toString(),
-        clientName: 'LOAMA',
-    })
-        .then(() => {
-            showWarning.value = false;
-            isLoading.value = false;
-        })
-        .catch(() => {
-            showWarning.value = true;
-            isLoading.value = false;
+    const redirectUrl = new URL(`${import.meta.env.BASE_URL}${nextPath}/`, window.location.href).toString();
+    const postLogoutRedirectUrl = new URL(`${import.meta.env.BASE_URL}`, window.location.href).toString();
+
+    try {
+        let clientId: string;
+        try {
+            clientId = await getOrRegisterDynamicClient({
+                issuer,
+                redirectUri: redirectUrl,
+                postLogoutRedirectUri: postLogoutRedirectUrl,
+                clientName: 'LOAMA',
+            });
+        } catch (registrationError) {
+            if (!configuredClientId) {
+                throw registrationError;
+            }
+            clientId = configuredClientId;
+        }
+
+        store.configureOidc({
+            authority: issuer,
+            clientId,
+            redirectUrl,
+            postLogoutRedirectUrl,
+            scope: 'openid profile webid',
         });
+
+        // Preserve the old behavior of showing the chosen IdP in the UI state.
+        store.setUsedPod(issuer);
+
+        await store.getOidcManager().signinRedirect({
+            state: { nextPath },
+        });
+    } catch {
+        showWarning.value = true;
+        isLoading.value = false;
+    }
 };
 
 const noPod = () => {

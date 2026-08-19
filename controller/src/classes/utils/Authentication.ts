@@ -1,24 +1,35 @@
-import { getDefaultSession } from '@inrupt/solid-client-authn-browser';
+export interface AuthenticationContext {
+  accessToken: string;
+  identifier: string;
+}
 
-export function authenticatedFetch(url: string, options?: RequestInit): Promise<Response> {
-  const webId = getDefaultSession().info.webId;
-  if (!webId) {
+let authContext: AuthenticationContext | undefined;
+
+export function setAuthenticationContext(context: AuthenticationContext): void {
+  authContext = context;
+}
+
+export function clearAuthenticationContext(): void {
+  authContext = undefined;
+}
+
+function requireAuthenticationContext(): AuthenticationContext {
+  if (!authContext) {
     throw new Error('User not logged in');
   }
-  options = {
+  return authContext;
+}
+
+export function authenticatedFetch(url: string, options?: RequestInit): Promise<Response> {
+  const { accessToken } = requireAuthenticationContext();
+  const headers = new Headers(options?.headers);
+  headers.set('Authorization', `Bearer ${accessToken}`);
+  return fetch(url, {
     ...options,
-    headers: {
-      ...options?.headers,
-      'Authorization': `WebID ${encodeURIComponent(webId)}`,
-    },
-  };
-  return fetch(url, options);
+    headers,
+  });
 }
 
 export function getLoggedInIdentifier(): string {
-  const webId = getDefaultSession().info.webId;
-  if (!webId) {
-    throw new Error('User not logged in');
-  }
-  return webId;
+  return requireAuthenticationContext().identifier;
 }
