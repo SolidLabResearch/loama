@@ -34,9 +34,12 @@ useTomSelectMultiple(purposeSelectEl, purposesModel, purposesEditable, {
   labelField: 'name',
   valueField: 'value',
   searchField: ['name', 'desc', 'value'],
+  placeholder: 'Search purposes or enter a custom IRI…',
+  create: true,
   render: {
     optgroup_header: (data: { label: string }) => `<div class="optgroup-header">${data.label}</div>`,
-    option: (data: { name: string; desc: string }) => `<div><strong>${data.name}</strong><div>${data.desc}</div></div>`,
+    option: (data: { name: string; desc?: string }) =>
+      `<div><strong>${data.name}</strong>${data.desc ? `<div>${data.desc}</div>` : ''}</div>`,
   },
 });
 
