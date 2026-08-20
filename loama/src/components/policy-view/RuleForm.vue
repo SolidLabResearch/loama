@@ -22,7 +22,8 @@
         </div>
 
         <label :for="`purpose`">Purpose</label>
-        <select :id="`purpose`" ref="purposeSelectEl" multiple></select>
+        <select v-if="purposesLoaded" :id="`purpose`" ref="purposeSelectEl" multiple></select>
+        <input v-else :id="`purpose`" value="Loading purposes..." disabled />
 
         <label :for="`startTime`">Start Time</label>
         <input type="datetime-local" :id="`startTime`" v-model="form.startTime" :disabled="!editable" />
@@ -53,10 +54,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
-import type { Rule, Constraint, RuleUpdate, Policy } from 'loama-controller';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import type { Rule, Constraint, RuleUpdate } from 'loama-controller';
 import { levelForAction } from '@/lib/Accesslevel';
-import { PURPOSES } from '@/lib/Purposes';
+import { loadPurposes, PURPOSES } from '@/lib/Purposes';
 import { useTomSelectMultiple } from '@/lib/Usetomselect'
 import { usePodStore } from '@/lib/state';
 import { useControllerStore } from '@/stores/useControllerStore';
@@ -95,6 +96,7 @@ const form = reactive({
 
 const errors = ref({ resourceIdentifier: false, action: false });
 const confirmingDelete = ref(false);
+const purposesLoaded = ref(false);
 
 watch(() => form.action.length, (newLength) => {
     if (newLength > 0 && errors.value.action) {
@@ -137,13 +139,6 @@ const heading = computed(() => {
     return 'Rule';
 });
 
-function uriToPurposeCurie(uri: string): string | null {
-    const group = PURPOSES.groups.find(g => uri.startsWith(g.prefix));
-    if (!group) return null;
-    const term = uri.slice(group.prefix.length);
-    return `${group.value}:${term}`;
-}
-
 const resetForm = () => {
     internalMode.value = props.mode;
 
@@ -151,7 +146,7 @@ const resetForm = () => {
         form.subjectId = props.rule.subjectId ?? '';
         form.resourceIdentifier = props.rule.resourceIdentifier ?? '';
         form.type = props.rule.type ?? 'permission';
-        form.action = props.rule.action 
+        form.action = props.rule.action
             ? props.rule.action
                 .map(actionUri => actionUri.split('/').pop())
                 .filter((action): action is string => Boolean(action))
@@ -160,8 +155,7 @@ const resetForm = () => {
         props.rule.constraint.forEach(c =>{
             if (c.leftOperand == "http://www.w3.org/ns/odrl/2/purpose") {
                     c.rightOperand.forEach(p => {
-                        const curie = uriToPurposeCurie(p);
-                        if (curie) form.purposes.push(curie);
+                        form.purposes.push(p);
                     });
                 }
             else if (c.leftOperand === "http://www.w3.org/ns/odrl/2/dateTime") {
@@ -200,6 +194,12 @@ const resetForm = () => {
 // Reset form whenever the passed-in rule or mode prop changes
 watch(() => [props.rule, props.mode], resetForm, { immediate: true });
 
+onMounted(async () => {
+    await loadPurposes();
+    purposesLoaded.value = true;
+    resetForm();
+});
+
 const actionStyle = (action: string) => {
     const level = levelForAction(action);
     return { backgroundColor: level.color, color: level.textColor };
@@ -224,15 +224,7 @@ const handleSave = async () => {
             constraints.push({
                 leftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
                 operator: 'http://www.w3.org/ns/odrl/2/eq',
-                rightOperand: purpose.startsWith('http')
-                    ? [purpose]
-                    : (() => {
-                        const [groupValue, ...termParts] = purpose.split(':');
-                        const term = termParts.join(':');
-                        const matchedGroup = PURPOSES.groups.find((g) => g.value === groupValue);
-                        const prefix = matchedGroup ? matchedGroup.prefix : 'https://w3id.org/dpv#';
-                        return [`${prefix}${term}`];
-                })()
+                rightOperand: [purpose]
             });
         });
 
