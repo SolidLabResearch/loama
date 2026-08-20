@@ -93,6 +93,38 @@ curl --location 'http://localhost:4000/uma/policies' --header 'Authorization: We
 3. Verify that the request appears in Alice's **Accepted** tab.
 4. Verify that the request appears in Bob's **Accepted** tab.
 
+## Deep-linking to a specific access request (Grant Access page)
+
+External clients can redirect a resource owner directly to the **Grant Access** page with a specific incoming request pre-filtered, so they immediately see the one they need to act on.
+
+### How it works
+
+Append a `request` query parameter whose value is the URL-encoded UID of the access request:
+
+```
+/access-grants/?request=<url-encoded-request-uid>
+```
+
+**Example:**
+
+```
+http://localhost:5173/access-grants/?request=http%3A%2F%2Fexample.org%2Fc432df06-9bae-4a20-a21d-0e30833552b0
+```
+
+When the parameter is present the page will:
+
+1. Show a **purple filter banner** at the top: *"Active filter: showing only the request you were directed to."*
+2. Display **only the matching request**, with the Accept / Deny buttons available as normal.
+3. Provide a **"Show all requests"** button inside the banner to clear the filter and return to the full grouped view (Requested / Accepted / Denied).
+
+If the UID in the parameter does not match any known request, a *"The requested access request could not be found."* message is shown instead.
+
+### Usage notes
+
+- The filter is applied purely client-side via the Vue Router query parameter; no server changes are required.
+- Clicking **"Show all requests"** removes the `request` parameter from the URL via `router.replace`, so the browser history is not polluted with the filtered URL.
+- The feature is intentionally **only on the Grant Access page** (`/access-grants/`). The Request Access page (`/access-requests/`) does not support this parameter.
+
 ## Known bugs and limitations
 
 * **UI State Sync:** When you update a policy on a selected resource, the interface does not visually refresh until you manually deselect and reselect that resource.
