@@ -10,8 +10,40 @@ const route = useRoute();
 const router = useRouter();
 const accessRequests: Ref<AccessRequest[]> = ref([]);
 
+const highlightedUid = computed(() =>
+  typeof route.query.request === 'string' ? route.query.request : null
+);
+
+const returnUrl = computed(() =>
+  typeof route.query.returnUrl === 'string' ? route.query.returnUrl : null
+);
+
+const buildReturnLocation = (requestID: string, status: 'accepted' | 'denied'): string | null => {
+  // Redirect callbacks are only enabled for deep-linked filtered requests.
+  if (!highlightedUid.value || highlightedUid.value !== requestID) return null;
+  if (!returnUrl.value) return null;
+
+  try {
+    const target = new URL(returnUrl.value);
+    // Never allow javascript: style redirects from query parameters.
+    if (target.protocol === 'javascript:') return null;
+    target.searchParams.set('request', requestID);
+    target.searchParams.set('decision', status);
+    return target.toString();
+  } catch {
+    return null;
+  }
+};
+
 const updateStatus = async (requestID: string, status: 'accepted' | 'denied') => {
   await controllerStore.current.handleAccessRequest(requestID, status);
+
+  const returnLocation = buildReturnLocation(requestID, status);
+  if (returnLocation) {
+    window.location.assign(returnLocation);
+    return;
+  }
+
   await fetchAccessRequests();
 };
 
@@ -28,9 +60,6 @@ onMounted(async () => {
 
 onBeforeUnmount(() => clearInterval(interval));
 
-const highlightedUid = computed(() =>
-  typeof route.query.request === 'string' ? route.query.request : null
-);
 
 const filteredRequests = computed(() =>
   highlightedUid.value

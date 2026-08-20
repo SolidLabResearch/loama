@@ -99,16 +99,23 @@ External clients can redirect a resource owner directly to the **Grant Access** 
 
 ### How it works
 
-Append a `request` query parameter whose value is the URL-encoded UID of the access request:
+Append:
+
+- a `request` query parameter whose value is the URL-encoded UID of the access request
+- an optional `returnUrl` query parameter whose value is the URL-encoded callback URL of the originating client
 
 ```
-/access-grants/?request=<url-encoded-request-uid>
+/access-grants/?request=<url-encoded-request-uid>&returnUrl=<url-encoded-callback-url>
 ```
 
 **Example:**
 
 ```
 http://localhost:5173/access-grants/?request=http%3A%2F%2Fexample.org%2Fc432df06-9bae-4a20-a21d-0e30833552b0
+```
+
+```text
+http://localhost:5173/access-grants/?request=http%3A%2F%2Fexample.org%2Fc432df06-9bae-4a20-a21d-0e30833552b0&returnUrl=https%3A%2F%2Fclient.example%2Fgrant-callback
 ```
 
 When the parameter is present the page will:
@@ -119,11 +126,15 @@ When the parameter is present the page will:
 
 If the UID in the parameter does not match any known request, a *"The requested access request could not be found."* message is shown instead.
 
+When `returnUrl` is provided, clicking **Accept** or **Deny** redirects the user to that URL only in the filtered deep-link flow (the `request` query is active and matches the acted item). The redirect appends:
+
+- `request=<request uid>`
+- `decision=accepted` or `decision=denied`
+
 ### Usage notes
 
 - The filter is applied purely client-side via the Vue Router query parameter; no server changes are required.
 - Clicking **"Show all requests"** removes the `request` parameter from the URL via `router.replace`, so the browser history is not polluted with the filtered URL.
-- The feature is intentionally **only on the Grant Access page** (`/access-grants/`). The Request Access page (`/access-requests/`) does not support this parameter.
 
 ## Known bugs and limitations
 
