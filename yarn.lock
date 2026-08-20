@@ -5496,6 +5496,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/n3@npm:^1":
+  version: 1.26.1
+  resolution: "@types/n3@npm:1.26.1"
+  dependencies:
+    "@rdfjs/types": "npm:*"
+    "@types/node": "npm:*"
+  checksum: 10c0/4797463efdf0e8425074bb0301ae1b83d7e04b39e3fc584e4e0f69e772883c6ef517983a764c7f9357bcefae42d978d1e857264ec5ecab643157d2f4f555fd17
+  languageName: node
+  linkType: hard
+
 "@types/n3@npm:^1.0.0, @types/n3@npm:^1.10.4":
   version: 1.16.5
   resolution: "@types/n3@npm:1.16.5"
@@ -8385,7 +8395,6 @@ __metadata:
   resolution: "loama-app@workspace:solid-app-lib"
   dependencies:
     "@inrupt/solid-client": "npm:^2.0.1"
-    "@inrupt/solid-client-authn-browser": "npm:^2.2.4"
     loama-common: "npm:^1.0.0"
     oidc-client-ts: "npm:^3.5.0"
     typescript: "npm:^5.5.4"
@@ -8430,6 +8439,7 @@ __metadata:
     "@primevue/themes": "npm:^4.1.1"
     "@rushstack/eslint-patch": "npm:^1.8.0"
     "@tsconfig/node20": "npm:^20.1.4"
+    "@types/n3": "npm:^1"
     "@types/node": "npm:^20.14.5"
     "@vitejs/plugin-vue": "npm:^5.0.5"
     "@vue/eslint-config-prettier": "npm:^9.0.0"
@@ -8443,6 +8453,7 @@ __metadata:
     loama-app: "npm:^1.0.0"
     loama-common: "npm:^1.0.0"
     loama-controller: "npm:^1.0.0"
+    n3: "npm:^1.26.0"
     pinia: "npm:^2.2.2"
     prettier: "npm:^3.2.5"
     primevue: "npm:^4.1.1"

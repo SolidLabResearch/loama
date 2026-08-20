@@ -3,13 +3,14 @@ import { computed, onBeforeUnmount, onMounted, ref, type Ref } from 'vue';
 import type { AccessRequest, Constraint } from 'loama-controller';
 import AccessRequestEntry from './AccessRequestEntry.vue';
 import { useControllerStore } from '@/stores/useControllerStore';
-import { PURPOSES } from '@/lib/Purposes';
+import { loadPurposes, PURPOSES } from '@/lib/Purposes';
 import { useTomSelectMultiple } from '@/lib/Usetomselect'
 import 'tom-select/dist/css/tom-select.css';
 
 const controllerStore = useControllerStore();
 
 const accessRequests: Ref<AccessRequest[]> = ref([]);
+const purposesLoaded = ref(false);
 
 const accessRequestParams = ref({
   target: '',
@@ -60,22 +61,14 @@ const clear = () => {
 
 const addAccessRequest = async () => {
   if (!validate()) return;
-  
+
   const constraints: Constraint[] = [];
 
   accessRequestParams.value.purposes.forEach(purpose => {
     constraints.push({
       leftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
       operator: 'http://www.w3.org/ns/odrl/2/eq',
-      rightOperand: purpose.startsWith('http')
-        ? [purpose]
-        : (() => {
-            const [groupValue, ...termParts] = purpose.split(':');
-            const term = termParts.join(':');
-            const matchedGroup = PURPOSES.groups.find((g) => g.value === groupValue);
-            const prefix = matchedGroup ? matchedGroup.prefix : 'https://w3id.org/dpv#';
-            return [`${prefix}${term}`];
-      })()
+      rightOperand: [purpose]
     });
   });
 
@@ -96,7 +89,7 @@ const addAccessRequest = async () => {
       rightOperand: [`"${endIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
     });
   }
-  
+
   await controllerStore.current.requestAccess({
     accessRequest: {
       uid: `http://example.org/request/${crypto.randomUUID()}`,
@@ -119,6 +112,8 @@ const fetchAccessRequests = async (): Promise<void> => {
 let interval: NodeJS.Timeout;
 
 onMounted(async () => {
+  await loadPurposes();
+  purposesLoaded.value = true;
   await fetchAccessRequests();
   interval = setInterval(fetchAccessRequests, 10 ** 4);
 });
@@ -155,7 +150,8 @@ onBeforeUnmount(() => clearInterval(interval));
         </select>
 
         <label for="purpose">Purpose</label>
-        <select name="purpose" id="purpose" ref="purposeSelectEl" multiple></select>
+        <select v-if="purposesLoaded" name="purpose" id="purpose" ref="purposeSelectEl" multiple></select>
+        <input v-else id="purpose" value="Loading purposes..." disabled />
 
         <label for="StartTime">Start Time</label>
         <input type="datetime-local" id="StartTime" v-model="accessRequestParams.startTime">
