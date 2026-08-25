@@ -24,6 +24,19 @@ export class ODRLPolicyService {
         return result;
     }
 
+    public async fetchResources(): Promise<string[]> {
+        // TODO: should use well-known URL
+        const response = await authenticatedFetch(`${this.authorizationServerURL}/resources/`);
+        if (!response.ok) {
+            throw new Error(response.statusText);
+        }
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+            throw new Error('Expected an array of resources');
+        }
+        return data;
+    }
+
     public async fetchPolicies() {
         // Get all our policies
         const response = await authenticatedFetch(UMA_URL(this.authorizationServerURL), {

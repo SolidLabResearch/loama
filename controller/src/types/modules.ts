@@ -15,6 +15,11 @@ export interface IController<T extends Record<keyof T, BaseSubject<keyof T & str
     getLabelForSubject<K extends SubjectKey<T>>(subject: T[K]): string;
     getOrCreateIndex(): Promise<Index>;
 
+    /**
+     * Returns all resources registered for the authorized user.
+     */
+    getResources(): Promise<string[]>;
+
     updatePolicy(updates: RuleUpdate[]): Promise<void>;
     getResourcePolicies(resourceUrl: string): Promise<Policy[]>;
 
