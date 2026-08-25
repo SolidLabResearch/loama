@@ -169,6 +169,6 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
         asRequestingParty: AccessRequestObject[];
         asResourceOwner: AccessRequestObject[];
     }> {
-        return new ODRLAccessRequestService(this.authorizationServerURL).retrieveAccessRequests();
+        return new ODRLAccessRequestService(this.authorizationServerURL).retrieveAccessRequests(await this.getResources());
     }
 }
