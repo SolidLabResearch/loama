@@ -7,8 +7,9 @@
             placeholder="webId of the person or app" />
 
         <label :for="`resource`">Resource</label>
-        <input :id="`resource`" v-model="form.resourceIdentifier" :disabled="!editable"
-            :class="{ error: errors.resourceIdentifier }" placeholder="resource url" />
+        <select v-if="resourcesLoaded" :id="`resource`" ref="resourceSelectEl"
+            :class="{ error: errors.resourceIdentifier }"></select>
+        <input v-else :id="`resource`" value="Loading resources..." disabled />
 
 
         <span class="field-label">Access level</span>
@@ -58,7 +59,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import type { Rule, Constraint, RuleUpdate } from 'loama-controller';
 import { levelForAction } from '@/lib/Accesslevel';
 import { loadPurposes, PURPOSES } from '@/lib/Purposes';
-import { useTomSelectMultiple } from '@/lib/Usetomselect'
+import { useTomSelectMultiple, useTomSelectSingle } from '@/lib/Usetomselect'
 import { usePodStore } from '@/lib/state';
 import { useControllerStore } from '@/stores/useControllerStore';
 import 'tom-select/dist/css/tom-select.css';
@@ -96,6 +97,7 @@ const form = reactive({
 
 const errors = ref({ resourceIdentifier: false, action: false });
 const confirmingDelete = ref(false);
+const resourcesLoaded = ref(false);
 const purposesLoaded = ref(false);
 
 watch(() => form.action.length, (newLength) => {
@@ -114,11 +116,26 @@ const subjectEditable = computed(() => {
     return editable.value && selectedPolicy.value?.type !== 'Agreement';
 });
 
+const resourceSelectEl = ref<HTMLSelectElement | null>(null);
+const resourceModel = computed<string>({
+    get: () => form.resourceIdentifier,
+    set: (value) => { form.resourceIdentifier = value; },
+});
+
 const purposeSelectEl = ref<HTMLSelectElement | null>(null);
 const purposesModel = computed<string[]>({
     get: () => form.purposes,
     set: (value) => { form.purposes = value; },
 });
+
+useTomSelectSingle(resourceSelectEl, resourceModel, editable, () => ({
+    options: podStore.resources.map((r) => ({ value: r, text: r })),
+    valueField: 'value',
+    labelField: 'text',
+    searchField: ['text'],
+    placeholder: 'Search resources…',
+    create: false,
+}));
 
 useTomSelectMultiple(purposeSelectEl, purposesModel, editable, {
     options: PURPOSES.options,
@@ -200,6 +217,8 @@ watch(() => [props.rule, props.mode], resetForm, { immediate: true });
 onMounted(async () => {
     await loadPurposes();
     purposesLoaded.value = true;
+    await podStore.loadResources(controllerStore.current);
+    resourcesLoaded.value = true;
     resetForm();
 });
 

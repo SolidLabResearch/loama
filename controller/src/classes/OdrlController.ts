@@ -53,6 +53,11 @@ export class ODRLController<T extends Record<keyof T, BaseSubject<keyof T & stri
         return resolver.toLabel(subject);
     }
 
+    async getResources(): Promise<string[]> {
+        return new ODRLPolicyService(this.authorizationServerURL).fetchResources();
+    }
+
+
     /**
      * Updates existing policies according to present rule changes
      * @param updates All requested changes
