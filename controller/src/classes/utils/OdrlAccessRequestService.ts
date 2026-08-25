@@ -85,14 +85,8 @@ export class ODRLAccessRequestService {
     /**
      * Retrieve all access requests related to the given resource owner or requesting party
      */
-    public retrieveAccessRequests = async (): Promise<{ asRequestingParty: AccessRequest[], asResourceOwner: AccessRequest[] }> => {
-        const [ requestsResponse, policiesResponse ] = await Promise.all(
-            ['/requests', '/policies'].map((endpoint) => authenticatedFetch(
-                `${this.authorizationServerURL}${endpoint}`, {
-                    method: 'GET',
-                }
-            ))
-        );
+    public retrieveAccessRequests = async (owned: string[]): Promise<{ asRequestingParty: AccessRequest[], asResourceOwner: AccessRequest[] }> => {
+        const requestsResponse = await authenticatedFetch(`${this.authorizationServerURL}/requests`);
 
         if (requestsResponse.status === 404) return {
             asRequestingParty: [],
@@ -100,10 +94,8 @@ export class ODRLAccessRequestService {
         }
 
         const requestsText = await requestsResponse.text() || '';
-        const policiesText = await policiesResponse.text() || '';
 
         const requestsStore = new Store(this.parser.parse(requestsText));
-        const policiesStore = new Store(this.parser.parse(policiesText));
 
         const id = getLoggedInIdentifier();
         const requestingPartyBindings = await this.queryEngine.queryBindings(
@@ -111,7 +103,7 @@ export class ODRLAccessRequestService {
         );
 
         const resourceOwnerBindings = await this.queryEngine.queryBindings(
-            this.accessRequestForResourceOwner(id), { sources: [requestsStore, policiesStore] }
+            this.accessRequestForResourceOwner(owned), { sources: [requestsStore] }
         );
 
         return {
@@ -207,10 +199,12 @@ export class ODRLAccessRequestService {
             (GROUP_CONCAT(DISTINCT ?action; separator=",") AS ?actions)
             ?constraintUri ?leftOperand ?operator ?rightOperand
         WHERE {
+            VALUES ?requestingParty { <${requestingPartyID}> }
+        
             ?uid a sotw:EvaluationRequest ;
                 sotw:requestedTarget ?target ;
                 sotw:requestedAction ?action ;
-                sotw:requestingParty <${requestingPartyID}> ;
+                sotw:requestingParty ?requestingParty ;
                 sotw:requestStatus ?status .
 
             OPTIONAL {
@@ -228,14 +222,9 @@ export class ODRLAccessRequestService {
      * Fetches all access requests controlled by a given WebId
      * Returns a SPARQL query string
      *
-     * An ID being the resource owner is determined by there being a policy owned by this ID targeting this resource.
-     * If there is no policy yet for this resource,
-     * this function will not be able to determine that the given ID is the owner.
-     *
-     * @param resourceOwnerID
      * @returns
      */
-    private readonly accessRequestForResourceOwner = (resourceOwnerID: string): string => `
+    private readonly accessRequestForResourceOwner = (owned: string[]): string => `
         PREFIX ex: <http://example.org/>
         PREFIX sotw: <https://w3id.org/force/sotw#>
         PREFIX odrl: <http://www.w3.org/ns/odrl/2/>
@@ -244,9 +233,8 @@ export class ODRLAccessRequestService {
             (GROUP_CONCAT(DISTINCT ?action; separator=",") AS ?actions)
             ?constraintUri ?leftOperand ?operator ?rightOperand
         WHERE {
-            ?policy odrl:target ?target ;
-                    odrl:assigner <${resourceOwnerID}> .
-
+            VALUES ?target { ${owned.map(o => `<${o}>`).join(' ')} }
+            
             ?uid a sotw:EvaluationRequest ;
                 sotw:requestedTarget ?target ;
                 sotw:requestedAction ?action ;
