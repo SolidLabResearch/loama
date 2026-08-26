@@ -1,6 +1,6 @@
 import { getLoggedInIdentifier } from './Authentication';
 import { Constraint, ISpecificTargetInfo, Policy, Rule } from "../../types/modules";
-import { DataFactory, Store, Writer } from "n3";
+import { DataFactory, Store, Writer, Quad_Object } from 'n3';
 import { ODRL } from "./PolicyParser";
 
 const { namedNode, literal } = DataFactory;
@@ -178,6 +178,7 @@ export class PolicyInterpreter {
                 }
 
                 if (constraint.rightOperand && constraint.rightOperand.length > 0) {
+                    const rightValues: Quad_Object[] = [];
                     for (const operand of constraint.rightOperand) {
                         let rightValue;
 
@@ -199,7 +200,12 @@ export class PolicyInterpreter {
                             rightValue = literal(cleanValue);
                         }
 
-                        writer.addQuad(constraintNode, namedNode(`${ODRL}rightOperand`), rightValue);
+                        rightValues.push(rightValue);
+                    }
+                    if (rightValues.length === 1) {
+                        writer.addQuad(constraintNode, namedNode(`${ODRL}rightOperand`), rightValues[0]);
+                    } else {
+                        writer.addQuad(constraintNode, namedNode(`${ODRL}rightOperand`), writer.list(rightValues));
                     }
                 }
             }
