@@ -242,12 +242,10 @@ const handleSave = async () => {
 
       const constraints: Constraint[] = [];
 
-        form.purposes.forEach(purpose => {
-            constraints.push({
-                leftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
-                operator: 'http://www.w3.org/ns/odrl/2/eq',
-                rightOperand: [purpose]
-            });
+        constraints.push({
+          leftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
+          operator: 'http://www.w3.org/ns/odrl/2/isAnyOf',
+          rightOperand: form.purposes,
         });
 
         if (form.startTime) {
