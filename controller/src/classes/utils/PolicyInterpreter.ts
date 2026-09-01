@@ -1,7 +1,7 @@
 import { getLoggedInIdentifier } from './Authentication';
 import { Constraint, ISpecificTargetInfo, Policy, Rule } from "../../types/modules";
 import { DataFactory, Store, Writer, Quad_Object } from 'n3';
-import { ODRL } from "./PolicyParser";
+import { ODRL, OVC } from './PolicyParser';
 
 const { namedNode, literal } = DataFactory;
 
@@ -63,14 +63,16 @@ export class PolicyInterpreter {
                 const actionNodes = store.getObjects(permNamedNode, ODRL("action"), null);
                 const targetNodes = store.getObjects(permNamedNode, ODRL("target"), null);
                 const assigneeNodes = store.getObjects(permNamedNode, ODRL("assignee"), null);
-                const assignerNodes = store.getObjects(permNamedNode, ODRL("assigner"), null);
                 const constraintNodes = store.getObjects(permNamedNode, ODRL("constraint"), null);
+                const vcConstraintNodes = store.getObjects(permNamedNode, OVC("constraint"), null);
 
                 const actions = actionNodes.map(node => node.value);
                 const targets = targetNodes.map(node => node.value);
                 const assignees = assigneeNodes.map(node => node.value);
-                const assigners = assignerNodes.map(node => node.value);
-                const constraintIds = constraintNodes.map(node => node.value);
+                const constraintRefs: { id: string; type: Constraint['type'] }[] = [
+                    ...constraintNodes.map(node => ({ id: node.value, type: 'ODRL' as const })),
+                    ...vcConstraintNodes.map(node => ({ id: node.value, type: 'VC' as const })),
+                ];
 
                 const permission: Rule = {
                     id: permId,
@@ -81,20 +83,33 @@ export class PolicyInterpreter {
                     constraint: []
                 }
 
-                constraintIds.forEach(constrId =>{
+                constraintRefs.forEach(({ id: constrId, type: constraintType }) =>{
                     const constrNamedNode = namedNode(constrId);
-                    const leftOperandNodes = store.getObjects(constrNamedNode, ODRL("leftOperand"), null);
                     const operatorNodes = store.getObjects(constrNamedNode, ODRL("operator"), null);
                     const rightOperandNodes = store.getObjects(constrNamedNode, ODRL("rightOperand"), null);
 
-                    const leftOperand = leftOperandNodes[0]?.value;
+                    let leftOperand: string | undefined;
+                    let credentialSubjectType: string | undefined;
+
+                    if (constraintType === 'VC') {
+                        const vcLeftOperandNodes = store.getObjects(constrNamedNode, OVC("leftOperand"), null);
+                        const credentialSubjectTypeNodes = store.getObjects(constrNamedNode, OVC("credentialSubjectType"), null);
+                        leftOperand = vcLeftOperandNodes[0]?.value;
+                        credentialSubjectType = credentialSubjectTypeNodes[0]?.value;
+                    } else {
+                        const leftOperandNodes = store.getObjects(constrNamedNode, ODRL("leftOperand"), null);
+                        leftOperand = leftOperandNodes[0]?.value;
+                    }
+
                     const operator = operatorNodes[0]?.value;
                     const rightOperand = rightOperandNodes.map(node => node.value);
 
                     const constraint: Constraint = {
                         leftOperand: leftOperand,
                         operator: operator,
-                        rightOperand: rightOperand
+                        rightOperand: rightOperand,
+                        type: constraintType,
+                        ...(credentialSubjectType ? { credentialSubjectType } : {}),
                     };
 
                     permission.constraint.push(constraint);
@@ -114,11 +129,13 @@ export class PolicyInterpreter {
      */
     public policyToTurtle(policy: Policy): string {
         const ODRL = 'http://www.w3.org/ns/odrl/2/';
+        const OVC = 'https://w3id.org/gaia-x/ovc/1/';
         const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
 
         const writer = new Writer({
             prefixes: {
             odrl: ODRL,
+            ovc: OVC,
             ex: 'http://example.org/'
             }
         });
@@ -159,15 +176,24 @@ export class PolicyInterpreter {
             for (let i = 0; i < rule.constraint.length; i++) {
                 const constraint = rule.constraint[i];
                 const constraintNode = namedNode(`${rule.id}/constraint/${i + 1}`);
+                const isVc = constraint.type === 'VC';
 
-                writer.addQuad(ruleNode, namedNode(`${ODRL}constraint`), constraintNode);
+                writer.addQuad(ruleNode, namedNode(`${isVc ? OVC : ODRL}constraint`), constraintNode);
                 writer.addQuad(constraintNode, namedNode(RDF_TYPE), namedNode(`${ODRL}Constraint`));
 
                 if (constraint.leftOperand) {
-                const leftUri = constraint.leftOperand.startsWith('http')
-                    ? constraint.leftOperand
-                    : `${ODRL}${constraint.leftOperand}`;
-                writer.addQuad(constraintNode, namedNode(`${ODRL}leftOperand`), namedNode(leftUri));
+                    if (isVc) {
+                        writer.addQuad(constraintNode, namedNode(`${OVC}leftOperand`), literal(constraint.leftOperand));
+                    } else {
+                        const leftUri = constraint.leftOperand.startsWith('http')
+                            ? constraint.leftOperand
+                            : `${ODRL}${constraint.leftOperand}`;
+                        writer.addQuad(constraintNode, namedNode(`${ODRL}leftOperand`), namedNode(leftUri));
+                    }
+                }
+
+                if (isVc && constraint.credentialSubjectType) {
+                    writer.addQuad(constraintNode, namedNode(`${OVC}credentialSubjectType`), namedNode(constraint.credentialSubjectType));
                 }
 
                 if (constraint.operator) {

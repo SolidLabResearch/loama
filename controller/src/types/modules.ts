@@ -131,9 +131,11 @@ export interface IRule {
 }
 
 export interface Constraint {
-	leftOperand: string;
-	operator: string;
-	rightOperand: string[];
+    type: 'ODRL' | 'VC';
+    leftOperand: string;
+    operator: string;
+    rightOperand: string[];
+    credentialSubjectType?: string;
 }
 
 // interface to represent access requests

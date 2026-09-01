@@ -157,6 +157,7 @@ export class ODRLAccessRequestService {
 
                 if (!existingConstraint) {
                     existingConstraint = {
+                        type: 'ODRL',
                         leftOperand: cleanLeft,
                         operator: cleanOp,
                         rightOperand: []
