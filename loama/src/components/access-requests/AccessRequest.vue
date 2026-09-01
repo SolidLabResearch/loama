@@ -69,6 +69,7 @@ const addAccessRequest = async () => {
 
   accessRequestParams.value.purposes.forEach(purpose => {
     constraints.push({
+      type: 'ODRL',
       leftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
       operator: 'http://www.w3.org/ns/odrl/2/eq',
       rightOperand: [purpose]
@@ -78,6 +79,7 @@ const addAccessRequest = async () => {
   if (accessRequestParams.value.startTime) {
     const startIso = new Date(accessRequestParams.value.startTime).toISOString();
     constraints.push({
+      type: 'ODRL',
       leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
       operator: 'http://www.w3.org/ns/odrl/2/gt',
       rightOperand: [`"${startIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
@@ -87,6 +89,7 @@ const addAccessRequest = async () => {
   if (accessRequestParams.value.endTime) {
     const endIso = new Date(accessRequestParams.value.endTime).toISOString();
     constraints.push({
+      type: 'ODRL',
       leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
       operator: 'http://www.w3.org/ns/odrl/2/lt',
       rightOperand: [`"${endIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
