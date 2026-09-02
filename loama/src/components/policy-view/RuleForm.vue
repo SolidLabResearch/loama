@@ -4,7 +4,7 @@
 
         <label :for="`subject`">Subject</label>
         <input :id="`subject`" v-model="form.subjectId" :disabled="!subjectEditable"
-            placeholder="webId of the person or app" />
+            placeholder="identifier of the subject" />
 
         <label :for="`resource`">Resource</label>
         <select v-if="resourcesLoaded" :id="`resource`" ref="resourceSelectEl"
