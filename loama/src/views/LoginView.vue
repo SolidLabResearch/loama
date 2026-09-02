@@ -1,9 +1,8 @@
 <template>
   <div class="panel-container">
     <div class="left-panel">
-      <LoginForm @toggle-provider="toggleSidePanel" v-model:showPopup="showPopup" title="LOAMA"
+      <LoginForm v-model:showPopup="showPopup" title="LOAMA"
         subtitle="ODRL policies made easy" />
-      <SidePanel :is-open="isPanelOpen" @toggle-provider="toggleSidePanel" ref="sidePanel" />
     </div>
     <div class="right-panel">
       <InfoPopup v-show="showPopup" />
@@ -15,15 +14,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import LoginForm from '@/components/LoginForm.vue';
-import SidePanel from '@/components/SidePanel.vue';
 import InfoPopup from '@/components/InfoPopup.vue';
 
-const isPanelOpen = ref(false);
 const showPopup = ref(false);
-
-const toggleSidePanel = () => {
-  isPanelOpen.value = !isPanelOpen.value;
-}
 </script>
 
 

@@ -22,9 +22,6 @@
             </label>
         </fieldset>
         <fieldset>
-            <LoButton @click.prevent="noPod" :disabled="isLoading" variant="secondary" :left-icon="PhQuestion">
-                No Pod?
-            </LoButton>
             <LoButton type="submit" :disabled="isLoading" :right-icon="PhArrowRight">
                 <span v-if="isLoading">Loading...</span>
                 <span v-else>Login</span>
@@ -37,16 +34,13 @@
 import { ref } from 'vue';
 import { store } from 'loama-app'
 import LoButton from './LoButton.vue';
-import { PhArrowRight, PhLink, PhQuestion } from '@phosphor-icons/vue';
+import { PhArrowRight, PhLink } from '@phosphor-icons/vue';
 import { getOrRegisterDynamicClient } from '@/lib/oidcDynamicRegistration';
 
 defineProps<{ title: string, subtitle?: string }>();
 
 const showPopup = defineModel<boolean>('showPopup');
 
-const emit = defineEmits<{
-    toggleProvider: []
-}>()
 
 const solidPodUrl = ref<string>('');
 const defaultSolidPodUrl = import.meta.env.VITE_DEFAULT_IDP;
@@ -104,9 +98,6 @@ const login = async () => {
     }
 };
 
-const noPod = () => {
-    emit('toggleProvider');
-};
 </script>
 
 <style scoped>
