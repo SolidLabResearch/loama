@@ -2,7 +2,7 @@
   <div class="panel-container">
     <div class="left-panel">
       <LoginForm @toggle-provider="toggleSidePanel" v-model:showPopup="showPopup" title="LOAMA"
-        subtitle="SOLID permissions made easy" />
+        subtitle="ODRL policies made easy" />
       <SidePanel :is-open="isPanelOpen" @toggle-provider="toggleSidePanel" ref="sidePanel" />
     </div>
     <div class="right-panel">
@@ -23,7 +23,7 @@ const showPopup = ref(false);
 
 const toggleSidePanel = () => {
   isPanelOpen.value = !isPanelOpen.value;
-} 
+}
 </script>
 
 
