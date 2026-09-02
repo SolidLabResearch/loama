@@ -432,6 +432,7 @@ const handleSave = async () => {
 
 const cancel = () => {
     resetForm();
+    emit('close');
 };
 
 const handleDelete = async () => {
