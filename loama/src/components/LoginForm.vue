@@ -15,6 +15,12 @@
             </label>
             <p v-if="showWarning" class="warning">Invalid Identity Provider URL. Please check and try again.</p>
         </fieldset>
+        <fieldset class="cache-option">
+            <label for="cache-registration">
+                <input type="checkbox" id="cache-registration" v-model="cacheRegistration" />
+                Remember client registration
+            </label>
+        </fieldset>
         <fieldset>
             <LoButton @click.prevent="noPod" :disabled="isLoading" variant="secondary" :left-icon="PhQuestion">
                 No Pod?
@@ -46,6 +52,7 @@ const solidPodUrl = ref<string>('');
 const defaultSolidPodUrl = import.meta.env.VITE_DEFAULT_IDP;
 const showWarning = ref<boolean>(false);
 const isLoading = ref<boolean>(false);
+const cacheRegistration = ref<boolean>(false);
 
 const login = async () => {
     isLoading.value = true;
@@ -68,6 +75,7 @@ const login = async () => {
                 redirectUri: redirectUrl,
                 postLogoutRedirectUri: postLogoutRedirectUrl,
                 clientName: 'LOAMA',
+                cacheRegistration: cacheRegistration.value,
             });
         } catch (registrationError) {
             if (!configuredClientId) {
@@ -174,6 +182,13 @@ fieldset {
 fieldset:has(button) {
     display: flex;
     justify-content: space-between;
+}
+
+.cache-option label {
+    display: flex;
+    align-items: center;
+    gap: var(--base-unit);
+    cursor: pointer;
 }
 
 button {

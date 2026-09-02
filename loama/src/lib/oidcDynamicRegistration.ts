@@ -3,6 +3,7 @@ export interface DynamicRegistrationOptions {
   redirectUri: string;
   postLogoutRedirectUri: string;
   clientName: string;
+  cacheRegistration?: boolean;
 }
 
 interface OidcMetadata {
@@ -28,10 +29,12 @@ function saveCachedClientId(issuer: string, redirectUri: string, postLogoutRedir
 }
 
 export async function getOrRegisterDynamicClient(options: DynamicRegistrationOptions): Promise<string> {
-  const { issuer, redirectUri, postLogoutRedirectUri, clientName } = options;
+  const { issuer, redirectUri, postLogoutRedirectUri, clientName, cacheRegistration = false } = options;
 
-  const cached = loadCachedClientId(issuer, redirectUri, postLogoutRedirectUri);
-  if (cached) return cached;
+  if (cacheRegistration) {
+    const cached = loadCachedClientId(issuer, redirectUri, postLogoutRedirectUri);
+    if (cached) return cached;
+  }
 
   const metadataResponse = await fetch(`${issuer.replace(/\/$/, '')}/.well-known/openid-configuration`);
   if (!metadataResponse.ok) {
@@ -69,6 +72,8 @@ export async function getOrRegisterDynamicClient(options: DynamicRegistrationOpt
     throw new Error('Dynamic registration did not return a client_id.');
   }
 
-  saveCachedClientId(issuer, redirectUri, postLogoutRedirectUri, registration.client_id);
+  if (cacheRegistration) {
+    saveCachedClientId(issuer, redirectUri, postLogoutRedirectUri, registration.client_id);
+  }
   return registration.client_id;
 }
