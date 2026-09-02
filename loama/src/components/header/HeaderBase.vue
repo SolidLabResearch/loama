@@ -6,7 +6,6 @@
         </div>
         <nav>
             <slot></slot>
-            <LoButton :rightIcon="PhShareFat" class="share" disabled>Share access</LoButton>
         </nav>
         <img :src="pfpSrc" alt="User profile picture" @click="toggleContextMenu" />
         <Suspense>
@@ -22,7 +21,6 @@
 import { ref } from 'vue';
 import LoButton from '../LoButton.vue'
 import HeaderContextMenu from './HeaderContextMenu.vue'
-import { PhShareFat } from '@phosphor-icons/vue';
 
 const pfpSrc = `${import.meta.env.BASE_URL}profile.svg`;
 const isContextMenuHidden = ref(true)
@@ -75,11 +73,6 @@ header {
 nav {
     flex-grow: 1;
     align-items: end;
-}
-
-.share {
-    align-self: center;
-    margin-left: auto;
 }
 
 img,
