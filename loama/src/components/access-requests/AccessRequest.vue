@@ -2,19 +2,21 @@
 import { computed, onBeforeUnmount, onMounted, ref, type Ref } from 'vue';
 import type { AccessRequest, Constraint } from 'loama-controller';
 import AccessRequestEntry from './AccessRequestEntry.vue';
+import { levelForAction } from '@/lib/Accesslevel';
 import { useControllerStore } from '@/stores/useControllerStore';
 import { loadPurposes, PURPOSES } from '@/lib/Purposes';
 import { useTomSelectMultiple } from '@/lib/Usetomselect'
 import 'tom-select/dist/css/tom-select.css';
 
 const controllerStore = useControllerStore();
+const AVAILABLE_ACTIONS = ['read', 'append', 'write', 'create', 'control'];
 
 const accessRequests: Ref<AccessRequest[]> = ref([]);
 const purposesLoaded = ref(false);
 
 const accessRequestParams = ref({
   target: '',
-  action: '',
+  actions: [] as string[],
   purposes: [] as string[],
   startTime: '',
   endTime: '',
@@ -50,14 +52,19 @@ const errors = ref<{ target: boolean; action: boolean }>({
   action: false,
 });
 
+const actionStyle = (action: string) => {
+  const level = levelForAction(action);
+  return { backgroundColor: level.color, color: level.textColor };
+};
+
 const validate = () => {
   errors.value.target = !accessRequestParams.value.target.trim();
-  errors.value.action = !accessRequestParams.value.action.trim();
+  errors.value.action = accessRequestParams.value.actions.length === 0;
   return !(errors.value.target || errors.value.action );
 };
 
 const clear = () => {
-  accessRequestParams.value = { target: '', action: '' , purposes: [], startTime: '', endTime: '',};
+  accessRequestParams.value = { target: '', actions: [], purposes: [], startTime: '', endTime: '',};
   mode.value = 'list';
   errors.value = { target: false, action: false };
 };
@@ -67,14 +74,16 @@ const addAccessRequest = async () => {
 
   const constraints: Constraint[] = [];
 
-  accessRequestParams.value.purposes.forEach(purpose => {
+  if (accessRequestParams.value.purposes.length > 0) {
     constraints.push({
       type: 'ODRL',
       leftOperand: 'http://www.w3.org/ns/odrl/2/purpose',
-      operator: 'http://www.w3.org/ns/odrl/2/eq',
-      rightOperand: [purpose]
+      operator: accessRequestParams.value.purposes.length > 1
+        ? 'http://www.w3.org/ns/odrl/2/isAnyOf'
+        : 'http://www.w3.org/ns/odrl/2/eq',
+      rightOperand: [...accessRequestParams.value.purposes]
     });
-  });
+  }
 
   if (accessRequestParams.value.startTime) {
     const startIso = new Date(accessRequestParams.value.startTime).toISOString();
@@ -82,7 +91,7 @@ const addAccessRequest = async () => {
       type: 'ODRL',
       leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
       operator: 'http://www.w3.org/ns/odrl/2/gt',
-      rightOperand: [`"${startIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
+      rightOperand: [`"${startIso}"^^http://www.w3.org/2001/XMLSchema#dateTime`]
     });
   }
 
@@ -92,7 +101,7 @@ const addAccessRequest = async () => {
       type: 'ODRL',
       leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
       operator: 'http://www.w3.org/ns/odrl/2/lt',
-      rightOperand: [`"${endIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
+      rightOperand: [`"${endIso}"^^http://www.w3.org/2001/XMLSchema#dateTime`]
     });
   }
 
@@ -100,7 +109,7 @@ const addAccessRequest = async () => {
     accessRequest: {
       uid: `http://example.org/request/${crypto.randomUUID()}`,
       target: accessRequestParams.value.target,
-      actions: [accessRequestParams.value.action],
+      actions: [...accessRequestParams.value.actions],
       constraint: constraints,
       requestingParty: '', //ToDo
       status: 'Requested'
@@ -142,18 +151,18 @@ onBeforeUnmount(() => clearInterval(interval));
         />
 
         <label for="action">What do you want to do with this resource?</label>
-        <select
-          id="action"
-          v-model="accessRequestParams.action"
-          :class="{ error: errors.action }"
-        >
-          <option value="" disabled>--pick a value--</option>
-          <option value="read">read</option>
-          <option value="write">write</option>
-          <option value="append">append</option>
-          <option value="create">create</option>
-          <option value="control">control</option>
-        </select>
+        <div class="action-options" :class="{ error: errors.action }">
+          <label
+            v-for="action in AVAILABLE_ACTIONS"
+            :key="action"
+            class="action-pill"
+            :class="{ checked: accessRequestParams.actions.includes(action) }"
+            :style="accessRequestParams.actions.includes(action) ? actionStyle(action) : undefined"
+          >
+            <input type="checkbox" :value="action" v-model="accessRequestParams.actions" />
+            {{ action }}
+          </label>
+        </div>
 
         <label for="purpose">Purpose</label>
         <select v-if="purposesLoaded" name="purpose" id="purpose" ref="purposeSelectEl" multiple></select>
@@ -304,9 +313,14 @@ select:focus {
 }
 
 input.error,
-select.error {
+select.error,
+.action-options.error {
   border-color: var(--lama-red);
   background-color: #ffe6e9;
+}
+
+div.error label {
+  border: 2px solid var(--lama-red) !important;
 }
 
 :deep(.ts-wrapper) {
@@ -353,6 +367,43 @@ select.error {
   background-color: color-mix(in srgb, var(--solid-purple) 15%, white);
   color: var(--solid-purple);
   border-radius: 999px;
+}
+
+.action-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  border-radius: var(--base-corner);
+}
+
+.action-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 0.125rem solid var(--lama-gray);
+  font-size: calc(var(--base-unit) * 1.5);
+  cursor: pointer;
+  background-color: var(--off-white);
+}
+
+.action-pill.checked {
+  border-color: transparent;
+}
+
+.action-pill input {
+  margin: 0;
+}
+
+.action-pill input:focus-visible {
+  outline: none;
+}
+
+.action-pill:has(input:focus-visible) {
+  outline: 0.125rem solid var(--solid-purple);
+  outline-offset: 0.1875rem;
 }
 
 /* Each request entry */

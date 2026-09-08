@@ -1,12 +1,13 @@
 import { authenticatedFetch, getLoggedInIdentifier } from './Authentication';
-import { AccessRequest } from "@/types/modules";
-import { QueryEngine } from "@comunica/query-sparql";
-import { Parser, Store } from "n3";
-import { v4 as uuid } from 'uuid';
+import { AccessRequest, Constraint } from '@/types/modules';
+import { Parser, Store } from 'n3';
+
+const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+const ODRL = 'http://www.w3.org/ns/odrl/2/';
+const SOTW = 'https://w3id.org/force/sotw#';
 
 export class ODRLAccessRequestService {
 
-    private readonly queryEngine = new QueryEngine();
     private readonly parser = new Parser({ format: 'text/turtle' });
 
     constructor(
@@ -46,10 +47,13 @@ export class ODRLAccessRequestService {
 
         if (accessRequest.constraint && accessRequest.constraint.length > 0) {
             accessRequest.constraint.forEach(con => {
+                const rightOperand = con.rightOperand.length === 1
+                    ? con.rightOperand[0]
+                    : con.rightOperand;
                 constraintsList.push([
                     con.leftOperand,
                     con.operator,
-                    con.rightOperand[0] //ToDo Work with list
+                    rightOperand
                 ]);
             });
         }
@@ -98,158 +102,53 @@ export class ODRLAccessRequestService {
         const requestsStore = new Store(this.parser.parse(requestsText));
 
         const id = getLoggedInIdentifier();
-        const requestingPartyBindings = await this.queryEngine.queryBindings(
-            this.accessRequestForRequestingParty(id), { sources: [requestsStore] }
-        );
 
-        const resourceOwnerBindings = await this.queryEngine.queryBindings(
-            this.accessRequestForResourceOwner(owned), { sources: [requestsStore] }
-        );
+        const accessRequests = this.storeToAccessRequests(requestsStore);
+        console.log(accessRequests);
 
         return {
-            asRequestingParty: await this.bindingsToAccessRequest(requestingPartyBindings),
-            asResourceOwner: await this.bindingsToAccessRequest(resourceOwnerBindings)
+            asRequestingParty: accessRequests.filter(req => req.requestingParty === id),
+            asResourceOwner: accessRequests.filter(req => owned.includes(req.target)),
         };
     }
 
-    /**
-     * Transform raw bindings to AccessRequest objects
-     * @param bindings
-     * @returns
-     */
-    private bindingsToAccessRequest = async (bindings: any): Promise<AccessRequest[]> => {
-        const requestsMap = new Map<string, AccessRequest>();
+    private storeToAccessRequests = (store: Store): AccessRequest[] => {
+        const requests: AccessRequest[] = [];
 
-        for await (const binding of bindings) {
-            const uid = binding.get('uid')?.value;
-            if (!uid) continue;
+        const lists = store.extractLists();
+        for (const node of store.getSubjects(RDF_TYPE, `${SOTW}EvaluationRequest`, null)) {
+            const uid = node.value;
+            const target = store.getObjects(node, `${SOTW}requestedTarget`, null)[0]?.value;
+            const actions = store.getObjects(node, `${SOTW}requestedAction`, null).map(obj => obj.value);
+            const requestingParty = store.getObjects(node, `${SOTW}requestingParty`, null)[0]?.value;
+            const status = store.getObjects(node, `${SOTW}requestStatus`, null)[0]?.value.slice(SOTW.length);
+            if (!uid || !target || !requestingParty || !status || actions.length === 0) continue;
 
-            if (!requestsMap.has(uid)) {
-                const rawActions = binding.get('actions')?.value ?? '';
-                const actions = rawActions
-                    ? rawActions.split(',').map((act: string) => this.cleanValue(act))
-                    : [];
+            let constraints: Constraint[] = [];
+            for (const constraintNode of store.getObjects(node, `${ODRL}constraint`, null)) {
+                const leftOperand = store.getObjects(constraintNode, `${ODRL}leftOperand`, null)[0]?.value;
+                const operator = store.getObjects(constraintNode, `${ODRL}operator`, null)[0]?.value;
+                const rightOperand = store.getObjects(constraintNode, `${ODRL}rightOperand`, null)[0]?.value;
+                const rightOperands = lists[rightOperand] ? lists[rightOperand].map(term => term.value) : [rightOperand];
+                if (!leftOperand || !operator || rightOperands.length === 0) continue;
 
-                requestsMap.set(uid, {
-                    uid,
-                    target: binding.get('target')?.value ?? '',
-                    actions,
-                    constraint: [],
-                    requestingParty: binding.get('requestingParty')?.value ?? '',
-                    status: this.cleanValue(binding.get('status')?.value),
+                constraints.push({
+                    type: 'ODRL',
+                    leftOperand,
+                    operator,
+                    rightOperand: rightOperands,
                 });
             }
 
-            const request = requestsMap.get(uid)!;
-
-            const leftOperand = binding.get('leftOperand')?.value;
-            const operator = binding.get('operator')?.value;
-            const rightOperand = binding.get('rightOperand')?.value;
-
-            if (leftOperand && operator && rightOperand) {
-                const cleanLeft = this.cleanValue(leftOperand);
-                const cleanOp = this.cleanValue(operator);
-                const cleanRight = this.cleanValue(rightOperand);
-
-                let existingConstraint = request.constraint.find(
-                    c => c.leftOperand === cleanLeft && c.operator === cleanOp
-                );
-
-                if (!existingConstraint) {
-                    existingConstraint = {
-                        type: 'ODRL',
-                        leftOperand: cleanLeft,
-                        operator: cleanOp,
-                        rightOperand: []
-                    };
-                    request.constraint.push(existingConstraint);
-                }
-
-                if (!existingConstraint.rightOperand.includes(cleanRight)) {
-                    existingConstraint.rightOperand.push(cleanRight);
-                }
-            }
+            requests.push({
+                uid,
+                target,
+                actions,
+                constraint: constraints,
+                requestingParty,
+                status,
+            });
         }
-
-        return Array.from(requestsMap.values());
-    };
-
-
-    /**
-     * Retrieves last part of URI.
-     * @param val - URI
-     */
-    private readonly cleanValue = (val?: string): string => {
-        if (!val) return '';
-        const match = val.match(/([^/#]+)$/);
-        return (match ? match[1] : val).toLowerCase();
+        return requests;
     }
-
-    /**
-     * Fetches all access requests submitted by a given WebId
-     * Returns a SPARQL query string
-     * @param requestingPartyID
-     * @returns
-     */
-    private readonly accessRequestForRequestingParty = (requestingPartyID: string): string => `
-        PREFIX ex: <http://example.org/>
-        PREFIX sotw: <https://w3id.org/force/sotw#>
-        PREFIX odrl: <http://www.w3.org/ns/odrl/2/>
-
-        SELECT ?uid ?target ?requestingParty ?status 
-            (GROUP_CONCAT(DISTINCT ?action; separator=",") AS ?actions)
-            ?constraintUri ?leftOperand ?operator ?rightOperand
-        WHERE {
-            VALUES ?requestingParty { <${requestingPartyID}> }
-        
-            ?uid a sotw:EvaluationRequest ;
-                sotw:requestedTarget ?target ;
-                sotw:requestedAction ?action ;
-                sotw:requestingParty ?requestingParty ;
-                sotw:requestStatus ?status .
-
-            OPTIONAL {
-                ?uid odrl:constraint ?constraintUri .
-                ?constraintUri a odrl:Constraint ;
-                            odrl:leftOperand ?leftOperand ;
-                            odrl:operator ?operator ;
-                            odrl:rightOperand ?rightOperand .
-            }
-        }
-        GROUP BY ?uid ?target ?requestingParty ?status ?constraintUri ?leftOperand ?operator ?rightOperand
-    `;
-
-    /**
-     * Fetches all access requests controlled by a given WebId
-     * Returns a SPARQL query string
-     *
-     * @returns
-     */
-    private readonly accessRequestForResourceOwner = (owned: string[]): string => `
-        PREFIX ex: <http://example.org/>
-        PREFIX sotw: <https://w3id.org/force/sotw#>
-        PREFIX odrl: <http://www.w3.org/ns/odrl/2/>
-
-        SELECT ?uid ?target ?requestingParty ?status 
-            (GROUP_CONCAT(DISTINCT ?action; separator=",") AS ?actions)
-            ?constraintUri ?leftOperand ?operator ?rightOperand
-        WHERE {
-            VALUES ?target { ${owned.map(o => `<${o}>`).join(' ')} }
-            
-            ?uid a sotw:EvaluationRequest ;
-                sotw:requestedTarget ?target ;
-                sotw:requestedAction ?action ;
-                sotw:requestingParty ?requestingParty ;
-                sotw:requestStatus ?status .
-
-            OPTIONAL {
-                ?uid odrl:constraint ?constraintUri .
-                ?constraintUri a odrl:Constraint ;
-                            odrl:leftOperand ?leftOperand ;
-                            odrl:operator ?operator ;
-                            odrl:rightOperand ?rightOperand .
-            }
-        }
-        GROUP BY ?uid ?target ?requestingParty ?status ?constraintUri ?leftOperand ?operator ?rightOperand
-    `;
 }
