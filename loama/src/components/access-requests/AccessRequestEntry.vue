@@ -26,14 +26,26 @@
                 <dt>Actions</dt>
                 <dd>
                     <div class="actions">
-                        <span class="action-chip" v-for="action in props.request.actions" :key="action"
-                            :style="actionStyle(action)">{{ shorten(action) }}</span>
+                        <span
+                            v-for="action in props.request.actions"
+                            :key="action"
+                            class="action-chip"
+                            :style="actionStyle(action)"
+                            :title="action"
+                        >
+                            {{ shorten(action) }}
+                        </span>
                     </div>
                 </dd>
 
                 <dt>Purpose</dt>
                 <dd>
-                    <span v-if="purposes.length">{{ purposes.join(', ') }}</span>
+                    <span v-if="purposes.length">
+                        <template v-for="(purpose, index) in purposes" :key="purpose.full">
+                            <span :title="purpose.full">{{ purpose.short }}</span>
+                            <span v-if="index < purposes.length - 1">, </span>
+                        </template>
+                    </span>
                     <span v-else class="no-constraints">No purpose specified</span>
                 </dd>
 
@@ -85,19 +97,19 @@ const formatDateTime = (raw: string) => {
 const purposes = computed(() =>
     props.request.constraint
         .filter(c => shorten(c.leftOperand) === 'purpose')
-        .flatMap(c => c.rightOperand.map(shorten))
+        .flatMap(c => c.rightOperand.map(purpose => ({ full: purpose, short: shorten(purpose) })))
 );
 
 const startTime = computed(() => {
     const constraint = props.request.constraint.find(
-        c => shorten(c.leftOperand) === 'datetime' && shorten(c.operator) === 'gt'
+        c => shorten(c.leftOperand) === 'dateTime' && shorten(c.operator) === 'gt'
     );
     return constraint ? formatDateTime(constraint.rightOperand[0]) : null;
 });
 
 const endTime = computed(() => {
     const constraint = props.request.constraint.find(
-        c => shorten(c.leftOperand) === 'datetime' && shorten(c.operator) === 'lt'
+        c => shorten(c.leftOperand) === 'dateTime' && shorten(c.operator) === 'lt'
     );
     return constraint ? formatDateTime(constraint.rightOperand[0]) : null;
 });

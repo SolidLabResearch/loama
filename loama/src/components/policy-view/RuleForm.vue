@@ -385,7 +385,7 @@ const handleSave = async () => {
             type: 'ODRL',
             leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
             operator: 'http://www.w3.org/ns/odrl/2/gt',
-            rightOperand: [`"${startIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
+            rightOperand: [`"${startIso}"^^http://www.w3.org/2001/XMLSchema#dateTime`]
             });
         }
 
@@ -395,7 +395,7 @@ const handleSave = async () => {
             type: 'ODRL',
             leftOperand: 'http://www.w3.org/ns/odrl/2/dateTime',
             operator: 'http://www.w3.org/ns/odrl/2/lt',
-            rightOperand: [`"${endIso}"^^http://www.w3.org/2001/XMLSchema#:dateTime`]
+            rightOperand: [`"${endIso}"^^http://www.w3.org/2001/XMLSchema#dateTime`]
             });
         }
 
